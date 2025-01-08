@@ -29,7 +29,7 @@
     "properties": {
       "username": {
         "type": "string",
-        "title": "Obico Benutzername"
+        "title": "Obico Benutzername "
       },
       "password": {
         "type": "string",
