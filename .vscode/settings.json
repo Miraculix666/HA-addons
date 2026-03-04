@@ -1,0 +1,16 @@
+{
+    "files.associations": {
+        "*.yaml": "yaml",
+        "*.yml": "yaml",
+        "Dockerfile": "dockerfile",
+        "config.json": "json"
+    },
+    "[yaml]": {
+        "editor.defaultFormatter": "redhat.vscode-yaml",
+        "editor.formatOnSave": true
+    },
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/home-assistant/supervisor/main/supervisor/data/schema/addon.json": "*/config.json"
+    },
+    "docker.defaultRegistryPath": "ghcr.io"
+}
