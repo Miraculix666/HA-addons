@@ -1,0 +1,111 @@
+blueprint:
+  name: Universal Notification Engine
+  description: >
+    Ein universelles Routing-Skript für Benachrichtigungen. 
+    Sendet Alarme dynamisch an Companion Apps, Alexa, Google Home, WhatsApp oder Telegram.
+  domain: script
+  input:
+    message:
+      name: Nachricht
+      description: Der zu sendende Text.
+      selector:
+        text:
+          multiline: true
+    title:
+      name: Titel
+      description: Titel der Benachrichtigung (optional, für Companion Apps/Telegram)
+      default: "Home Assistant"
+      selector:
+        text:
+    use_companion:
+      name: Companion App
+      description: Sende Push-Benachrichtigung an alle angemeldeten Handys
+      default: true
+      selector:
+        boolean:
+    use_alexa:
+      name: Alexa TTS
+      description: Sende Sprachausgabe an Alexa-Geräte
+      default: false
+      selector:
+        boolean:
+    use_google:
+      name: Google Home TTS
+      description: Sende Sprachausgabe an Google Assistant
+      default: false
+      selector:
+        boolean:
+    use_whatsapp:
+      name: WhatsApp
+      description: Sende via WhatsApp (sofern konfiguriert)
+      default: false
+      selector:
+        boolean:
+    use_telegram:
+      name: Telegram
+      description: Sende via Telegram (sofern konfiguriert)
+      default: false
+      selector:
+        boolean:
+
+sequence:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_companion }}"
+        sequence:
+          - service: notify.notify
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+            continue_on_error: true
+          # Fallback specific service if generic fails
+          - service: notify.mobile_app_marius_mi_15t_pro
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+            continue_on_error: true
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_alexa }}"
+        sequence:
+          - service: notify.alexa_media
+            data:
+              message: "{{ message }}"
+              data:
+                type: tts
+            continue_on_error: true
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_google }}"
+        sequence:
+          - service: tts.google_translate_say
+            data:
+              message: "{{ message }}"
+            target:
+              entity_id: all
+            continue_on_error: true
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_whatsapp }}"
+        sequence:
+          - service: notify.whatsapp
+            data:
+              message: "{{ message }}"
+            continue_on_error: true
+
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_telegram }}"
+        sequence:
+          - service: notify.telegram
+            data:
+              message: "{{ title }}\n{{ message }}"
+            continue_on_error: true
