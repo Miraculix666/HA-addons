@@ -152,8 +152,14 @@ Every **5 agent sessions** OR on explicit request, run:
 
 ---
 
-## � Environment Data & Secrets Management
+## ⚙️ Environment Data & Secrets Management
 
+- **Centralized Environment Configs (MANDATORY):** Alle umgebungsspezifischen Konfigurationen (wie URLs, Pfade, Hostnamen, Credentials) MÜSSEN zwingend in einer zentralen Datei gesammelt werden.
+- **Unified Naming & Format:** Die Benennung dieser Datei muss über alle Repositories hinweg einheitlich sein. Als Standard wird `environment.json` (mit Pseudo-Kommentaren) oder `environment.yaml` / `.env` festgelegt.
+- **Self-Documenting Comments:** In der Konfigurationsdatei (oder einer zugehörigen `.example`-Datei) MUSS im Zeilenkommentar immer genug Information stehen, um die Datei direkt ausfüllen zu können. Dies umfasst:
+  - Beispielwerte & Defaults
+  - Dummy-Daten
+  - Klare Anforderungen (z.B. "Das Passwort muss mindestens 8 Zeichen lang sein und Sonderzeichen enthalten")
 - **Separation of Code & Config:** Skripte müssen immer so geschrieben werden, dass das eigentliche Skript veröffentlicht werden kann ("publishable") und **keine privaten Daten** enthält.
 - **Secure Storage (Settings):** Wenn spezifische Einstellungen getroffen werden (Client, Dienstname, Configs), müssen diese sicher, sortiert und getrennt gespeichert werden, sodass Skripte und Einstellungen wiederverwendet werden können.
 - **Environment Inheritance:** Daten zum Environment müssen immer sicher passend abgespeichert werden und vererben sich automatisch auf die Unterordner.
