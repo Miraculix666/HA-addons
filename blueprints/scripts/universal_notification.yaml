@@ -2,7 +2,7 @@ blueprint:
   name: Universal Notification Engine
   description: >
     Ein universelles Routing-Skript für Benachrichtigungen. 
-    Sendet Alarme dynamisch an Companion Apps, Alexa, Google Home, WhatsApp oder Telegram.
+    Sendet Alarme dynamisch an Companion Apps, Web-UI, Alexa, Google Home, WhatsApp oder Telegram.
   domain: script
   input:
     message:
@@ -13,10 +13,16 @@ blueprint:
           multiline: true
     title:
       name: Titel
-      description: Titel der Benachrichtigung (optional, für Companion Apps/Telegram)
+      description: Titel der Benachrichtigung (optional, für Companion Apps/Telegram/Web-UI)
       default: "Home Assistant"
       selector:
         text:
+    use_ui:
+      name: HA Web-UI (Persistent Notification)
+      description: Zeigt die Benachrichtigung in der Home Assistant Weboberfläche an (Glocken-Symbol)
+      default: true
+      selector:
+        boolean:
     use_companion:
       name: Companion App
       description: Sende Push-Benachrichtigung an alle angemeldeten Handys
@@ -49,6 +55,17 @@ blueprint:
         boolean:
 
 sequence:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: "{{ use_ui }}"
+        sequence:
+          - service: persistent_notification.create
+            data:
+              title: "{{ title }}"
+              message: "{{ message }}"
+            continue_on_error: true
+
   - choose:
       - conditions:
           - condition: template
