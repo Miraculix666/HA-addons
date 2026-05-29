@@ -181,7 +181,34 @@ Every **5 agent sessions** OR on explicit request, run:
 
 ---
 
-## �🔖 Version Management & Auto-Commit Protocol
+## 🧪 Automated Testing Standard (High-Fidelity Mock & Integration Testing)
+
+Every repository and component MUST implement a rigorous, automated, non-elevated, and high-fidelity testing process that adheres to the following principles:
+
+### 1. Separate Script-Driven Test Runner
+- Create a dedicated test runner script (e.g., `tests/Run-FullTestSuite.ps1` or `tests/test_runner.py`) in the `tests/` directory.
+- The test runner must execute fully unattended (non-interactive) without requiring human input or blocking the console.
+
+### 2. High-Fidelity Test Environment Mocking
+- **No-Privilege Mode Support:** Provide a clean mock-bypass toggle (e.g., `$global:BypassAdminCheck` or `$env:BYPASS_ADMIN_CHECK`) to safely bypass any required Administrator or system elevation checks.
+- **Unattended Console Detection:** Ensure all interactive prompts, confirmation checks (e.g., "J/N" menus), and GUI prompts are bypassed under test/automation mode (e.g., overriding raw interactive console checks).
+- **Mocking System/Network Actions:** Instead of failing on remote system calls, Active Directory pings, or SMTP transports, intercept them under test bypass mode to output realistic success logs and simulated return states.
+
+### 3. Step-by-Step Function & Scenario Coverage
+- **Step-by-Step Function Testing:** Separately verify each independent module, function, and parameter set of the codebase.
+- **Dynamic Log Verification (`GenerateFromLog`):** Test the full roundtrip of state changes by ensuring outputs of a provisioning step are dynamically parsed and fed into downstream query/replay steps (e.g., re-running from logs).
+- **Component and Standalone Testing:** Add tests for all supplementary templates, dashboards, and CLI session launchers (both dry-run summaries and connectivity-only modes).
+
+### 4. Dummy/Local Data Requirements
+- **Always Online Test Targets:** Use dummy/local test targets (e.g., `127.0.0.1` and `localhost` in `Clients_Test.csv`) for connection validation to ensure they are always online and reachable.
+- **Controlled Test Dataset:** Maintain a representative dummy CSV/data set (e.g., `Users_Test_5.csv` representing participants, teachers, and admins) to exercise all branches.
+
+### 5. Strict Error Catching and Validation
+- **Exit Code Verification:** Ensure that non-zero exit codes or script exit statuses (`$LASTEXITCODE`) are intercepted inside the test block and thrown as terminating errors so that failures are caught.
+
+---
+
+## 🔖 Version Management & Auto-Commit Protocol
 
 ### Pflege von `version.json` und `package.json`
 
