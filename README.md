@@ -1,2 +1,1 @@
-# HA-addons
-Test repo for new add-ons 
+# HA-addons\nTest repo for new add-ons
