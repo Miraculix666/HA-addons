@@ -60,7 +60,7 @@ sequence:
           - condition: template
             value_template: "{{ use_ui }}"
         sequence:
-          - service: persistent_notification.create
+          - action: persistent_notification.create
             data:
               title: "{{ title }}"
               message: "{{ message }}"
@@ -71,13 +71,15 @@ sequence:
           - condition: template
             value_template: "{{ use_companion }}"
         sequence:
-          - service: notify.notify
+          - action: notify.notify
             data:
               title: "{{ title }}"
               message: "{{ message }}"
             continue_on_error: true
           # Fallback specific service if generic fails
-          - service: notify.mobile_app_marius_mi_15t_pro
+          - action: notify.send_message
+            target:
+              entity_id: notify.mobile_app_marius_mi_15t_pro
             data:
               title: "{{ title }}"
               message: "{{ message }}"
@@ -88,7 +90,7 @@ sequence:
           - condition: template
             value_template: "{{ use_alexa }}"
         sequence:
-          - service: notify.alexa_media
+          - action: notify.alexa_media
             data:
               message: "{{ message }}"
               data:
@@ -100,7 +102,7 @@ sequence:
           - condition: template
             value_template: "{{ use_google }}"
         sequence:
-          - service: tts.google_translate_say
+          - action: tts.google_translate_say
             data:
               message: "{{ message }}"
             target:
@@ -112,7 +114,9 @@ sequence:
           - condition: template
             value_template: "{{ use_whatsapp }}"
         sequence:
-          - service: notify.whatsapp
+          - action: notify.send_message
+            target:
+              entity_id: notify.whatsapp
             data:
               message: "{{ message }}"
             continue_on_error: true
@@ -122,7 +126,9 @@ sequence:
           - condition: template
             value_template: "{{ use_telegram }}"
         sequence:
-          - service: notify.telegram
+          - action: notify.send_message
+            target:
+              entity_id: notify.telegram
             data:
               message: "{{ title }}\n{{ message }}"
             continue_on_error: true
