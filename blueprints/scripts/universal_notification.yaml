@@ -54,6 +54,16 @@ blueprint:
       selector:
         boolean:
 
+    fallback_notify_service:
+      name: Fallback Notify Service
+      description: Specific notify service to use as fallback (e.g. notify.mobile_app_my_phone). Leave empty to disable.
+      default: ""
+      selector:
+        text:
+
+variables:
+  fallback_notify_service: !input fallback_notify_service
+
 sequence:
   - choose:
       - conditions:
@@ -77,11 +87,16 @@ sequence:
               message: "{{ message }}"
             continue_on_error: true
           # Fallback specific service if generic fails
-          - service: notify.mobile_app_marius_mi_15t_pro
-            data:
-              title: "{{ title }}"
-              message: "{{ message }}"
-            continue_on_error: true
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ fallback_notify_service | length > 0 }}"
+                sequence:
+                  - service: "{{ fallback_notify_service }}"
+                    data:
+                      title: "{{ title }}"
+                      message: "{{ message }}"
+                    continue_on_error: true
 
   - choose:
       - conditions:
