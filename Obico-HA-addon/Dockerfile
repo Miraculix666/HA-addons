@@ -1,17 +1,15 @@
 FROM ghcr.io/gabe565/obico:latest
 
-# Füge deinen Benutzer und dein Passwort hinzu (optional)
-ARG USERNAME
-ARG PASSWORD
+# Remove the arguments and the user setup block from build-time.
+# This prevents passwords from being leaked into the image's history.
 
-# Erstelle den Obico Benutzer und setze das Passwort
-RUN if [ -n "$USERNAME" ] && [ -n "$PASSWORD" ]; then \
-    useradd -m -d /home/obico -s /bin/bash obico && \
-    echo "obico:$PASSWORD" | chpasswd ; \
-fi
-
-# Setze den Arbeitsordner
+# Set the working directory
 WORKDIR /app
 
-# Starte Obico
+# Copy the custom runtime configuration script
+COPY run.sh /run.sh
+RUN chmod +x /run.sh
+
+# Start Obico via run.sh script, which will setup user before passing arguments
+ENTRYPOINT ["/run.sh"]
 CMD ["obico", "server"]
