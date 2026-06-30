@@ -11,8 +11,7 @@
 set -euo pipefail
 
 # ── Colours & Symbols ────────────────────────────────────────
-RED='\033[0;31m'; YELLOW='\033[1;33m'; GREEN='\033[0;32m'
-BLUE='\033[0;34m'; CYAN='\033[0;36m'; BOLD='\033[1m'; NC='\033[0m'
+source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
 
 OK="✅"; WARN="🟡"; FAIL="❌"; INFO="🔵"; LOCK="🔒"
 
@@ -33,7 +32,7 @@ echo "╠═══════════════════════�
 echo "║  $(date '+%Y-%m-%d %H:%M:%S')                          ║"
 echo "╚══════════════════════════════════════════════╝${NC}"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 # ── [1/6] Required Files ─────────────────────────────────────
@@ -72,23 +71,29 @@ LOCK_FILE=".agent/locks/.locked"
 if command -v python3 &>/dev/null; then
   if python3 -c "import json; json.load(open('$LOCK_FILE'))" 2>/dev/null; then
     pass ".locked is valid JSON"
-    LOCK_COUNT=$(python3 -c "import json; data=json.load(open('$LOCK_FILE')); print(len(data.get('locks', [])))")
-    HARD_COUNT=$(python3 -c "import json; data=json.load(open('$LOCK_FILE')); print(sum(1 for l in data.get('locks',[]) if l.get('type')=='HARD'))")
-    SOFT_COUNT=$(python3 -c "import json; data=json.load(open('$LOCK_FILE')); print(sum(1 for l in data.get('locks',[]) if l.get('type')=='SOFT'))")
-    info "Total locks: $LOCK_COUNT (${RED}HARD: $HARD_COUNT${NC}${BLUE}, SOFT: $SOFT_COUNT${NC})"
-    # Check for stale SOFT locks
     NOW=$(date +%s)
-    STALE=$(python3 -c "
+    eval "$(python3 -c "
 import json, datetime
-data = json.load(open('$LOCK_FILE'))
-stale = []
-for l in data.get('locks', []):
-    if l.get('type') in ('SOFT', 'REQ') and l.get('expires_at'):
-        exp = datetime.datetime.fromisoformat(l['expires_at'].replace('Z','+00:00'))
-        if exp.timestamp() < $NOW:
-            stale.append(l['id'])
-print(','.join(stale) if stale else '')
-")
+try:
+    with open('$LOCK_FILE') as f:
+        data = json.load(f)
+    locks = data.get('locks', [])
+    hard = sum(1 for l in locks if l.get('type') == 'HARD')
+    soft = sum(1 for l in locks if l.get('type') == 'SOFT')
+    stale = []
+    for l in locks:
+        if l.get('type') in ('SOFT', 'REQ') and l.get('expires_at'):
+            exp = datetime.datetime.fromisoformat(l['expires_at'].replace('Z','+00:00'))
+            if exp.timestamp() < $NOW:
+                stale.append(l['id'])
+    print(f\"LOCK_COUNT={len(locks)}\")
+    print(f\"HARD_COUNT={hard}\")
+    print(f\"SOFT_COUNT={soft}\")
+    print(f\"STALE='{','.join(stale)}'\")
+except Exception:
+    pass
+")"
+    info "Total locks: $LOCK_COUNT (${RED}HARD: $HARD_COUNT${NC}${BLUE}, SOFT: $SOFT_COUNT${NC})"
     if [[ -z "$STALE" ]]; then
       pass "No stale locks detected"
     else
