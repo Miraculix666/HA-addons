@@ -66,6 +66,11 @@
 └─────────────────────────────────────────────────┘
 ```
 
+### 2.5 Continuous Optimization & Best Practices
+- ⚡ **Always Optimize**: Before implementing any solution, explicitly check if there is a better, faster, more best-practice, multithreaded (e.g., using runspaces, jobs, or parallel loops), or otherwise optimized way to achieve the goal.
+- 📈 **Performance & Scaling**: Ensure scripts scale efficiently, minimize network/AD queries (avoid N+1 query patterns), and optimize file I/O operations.
+
+
 ---
 
 ## 3. Interaction Workflows
