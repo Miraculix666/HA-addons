@@ -32,9 +32,8 @@ This framework provides a **universal, language-agnostic, multi-agent-ready proj
 
 ## 🔗 Workspace Integration & Deployment
 
-- **Single Source of Truth:** ALLES, was in `C:\GitHub\agents_and_prompts\agents\master` definiert ist, gilt global für alle Repositories. Dort wird der Master-Agent zentral gepflegt.
-- **Junction Links in jedem Repo:** In jedem Repository muss im Stammordner ein Junction Link (in der Regel `.agent`) angelegt werden, welcher auf `C:\GitHub\agents_and_prompts\agents\master\.agent` verweist. Dadurch stehen Änderungen am Agenten immer sofort und direkt in allen Repositories zur Verfügung, ohne dass Konfigurationen kopiert werden müssen.
-- **Auto-Clone neuer Repos:** Sobald ein neues Repository remote erstellt wurde, soll es umgehend lokal geklont werden, damit die lokale Workspace-Struktur lückenlos bleibt und der Agent sofort über den Junction Link angebunden werden kann.
+- **No Repository Crossing Links:** Repositories must remain completely independent. Do not use directory junctions or symbolic links to share code, scripts, or configurations between repositories.
+- **Auto-Clone neuer Repos:** Sobald ein neues Repository remote erstellt wurde, soll es umgehend lokal geklont werden, damit die lokale Workspace-Struktur lückenlos bleibt.
 - **Workspace-Dateien:** Jedes Repository MUSS in den globalen Workspace `all.code-workspace` inkludiert sein und zudem über einen eigenen dedizierten Workspace (z.B. `<RepoName>.code-workspace` im zentralen Verzeichnis) verfügen.
 
 ---
