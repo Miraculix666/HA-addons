@@ -22,6 +22,9 @@ def test_lock_manager_lock_validation():
 
         # Copy script to the temporary directory so its REPO_ROOT points to tmpdir
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -63,6 +66,9 @@ def test_lock_manager_lock_conflicts():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
 
@@ -106,6 +112,9 @@ def test_lock_manager_invalid_arguments():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')

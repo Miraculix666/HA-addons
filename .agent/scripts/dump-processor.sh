@@ -32,9 +32,26 @@ fi
 echo -e "${YELLOW}🟡 Found ${#FILES[@]} file(s) in dump/inbox/${NC}"
 echo ""
 
+declare -A file_sizes
+while read -r size path; do
+  file_sizes["$path"]="$size"
+done < <(du -sh "${FILES[@]}" 2>/dev/null || true)
+
+declare -A file_times
+if stat --version &>/dev/null; then
+  while IFS='|' read -r mtime path; do
+    file_times["$path"]=${mtime:0:16}
+  done < <(stat -c "%y|%n" "${FILES[@]}" 2>/dev/null || true)
+else
+  while IFS='|' read -r mtime path; do
+    file_times["$path"]=$mtime
+  done < <(stat -f "%Sm|%N" -t "%Y-%m-%d %H:%M" "${FILES[@]}" 2>/dev/null || true)
+fi
+
 for i in "${!FILES[@]}"; do
-  echo -e "  ${BLUE}[$((i+1))] ${FILES[$i]##*/}${NC}"
-  echo -e "      Size: $(du -sh "${FILES[$i]}" | cut -f1) | Modified: $(date -r "${FILES[$i]}" '+%Y-%m-%d %H:%M')"
+  f="${FILES[$i]}"
+  echo -e "  ${BLUE}[$((i+1))] ${f##*/}${NC}"
+  echo -e "      Size: ${file_sizes[$f]:-unknown} | Modified: ${file_times[$f]:-unknown}"
 done
 
 echo ""
