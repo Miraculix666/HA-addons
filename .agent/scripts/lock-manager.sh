@@ -266,6 +266,10 @@ EOF
 
 cmd_history() {
   local last="${2:-10}"
+  if ! [[ "$last" =~ ^[0-9]+$ ]]; then
+    echo -e "${RED}❌ Invalid history count: must be a positive integer${NC}" >&2
+    exit 1
+  fi
   echo -e "${BOLD}${CYAN}📜 Lock Registry (last $last entries)${NC}"
   grep -A 10 "^### " "$REGISTRY_FILE" | tail -$(( last * 12 )) || echo "No history yet"
 }
