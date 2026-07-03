@@ -57,7 +57,7 @@
 ### `scripts/health-check.sh`
 | Test | Type | Status |
 |---|---|---|
-| All required files exist | Unit | ⚪ TODO |
+| All required files exist | Unit | 🟢 DONE |
 | `.locked` valid JSON | Unit | ⚪ TODO |
 | No stale SOFT locks | Unit | ⚪ TODO |
 | Dump inbox check | Unit | ⚪ TODO |
