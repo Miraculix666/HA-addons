@@ -78,14 +78,22 @@ try:
     with open('$LOCK_FILE') as f:
         data = json.load(f)
     locks = data.get('locks', [])
-    hard = sum(1 for l in locks if l.get('type') == 'HARD')
-    soft = sum(1 for l in locks if l.get('type') == 'SOFT')
+    hard = 0
+    soft = 0
     stale = []
     for l in locks:
-        if l.get('type') in ('SOFT', 'REQ') and l.get('expires_at'):
-            exp = datetime.datetime.fromisoformat(l['expires_at'].replace('Z','+00:00'))
-            if exp.timestamp() < $NOW:
-                stale.append(l['id'])
+        l_type = l.get('type')
+        if l_type == 'HARD':
+            hard += 1
+        elif l_type == 'SOFT':
+            soft += 1
+
+        if l_type in ('SOFT', 'REQ'):
+            expires_at = l.get('expires_at')
+            if expires_at:
+                exp = datetime.datetime.fromisoformat(expires_at.replace('Z','+00:00'))
+                if exp.timestamp() < $NOW:
+                    stale.append(l['id'])
     print(f\"LOCK_COUNT={len(locks)}\")
     print(f\"HARD_COUNT={hard}\")
     print(f\"SOFT_COUNT={soft}\")
