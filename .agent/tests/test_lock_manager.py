@@ -22,6 +22,7 @@ def test_lock_manager_lock_validation():
 
         # Copy script to the temporary directory so its REPO_ROOT points to tmpdir
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -63,6 +64,7 @@ def test_lock_manager_lock_conflicts():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
 
@@ -106,6 +108,7 @@ def test_lock_manager_invalid_arguments():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -117,3 +120,35 @@ def test_lock_manager_invalid_arguments():
         )
         assert result.returncode == 1
         assert "Lock Manager \u2014 Usage" in result.stdout
+
+def test_lock_manager_history_injection():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text('{"locks": []}')
+
+        registry_file = tmp_path / ".agent" / "locks" / "LOCK_REGISTRY.md"
+        registry_file.write_text('')
+
+        # Test valid history count
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "history", "5"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 0
+        assert "Lock Registry (last 5 entries)" in result.stdout
+
+        # Test invalid history count (command injection attempt)
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "history", "a[$(id>&2)]"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Invalid history count: must be a positive integer" in result.stderr
