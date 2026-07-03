@@ -52,7 +52,7 @@ trigger:
     event_type: "tibber_force_evaluation"
 
 action:
-  - service: pyscript.tibber_evaluate_device
+  - action: pyscript.tibber_evaluate_device
     data:
       target_entity: !input target_entity
       hours: !input duration_hours
