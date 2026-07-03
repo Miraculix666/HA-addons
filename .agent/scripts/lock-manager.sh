@@ -11,7 +11,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 LOCK_FILE="$REPO_ROOT/.agent/locks/.locked"
 REGISTRY_FILE="$REPO_ROOT/.agent/locks/LOCK_REGISTRY.md"
 
