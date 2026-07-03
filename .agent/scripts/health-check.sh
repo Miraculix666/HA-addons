@@ -18,9 +18,9 @@ OK="✅"; WARN="🟡"; FAIL="❌"; INFO="🔵"; LOCK="🔒"
 PASS=0; WARNINGS=0; FAILURES=0
 
 # ── Helpers ──────────────────────────────────────────────────
-pass()  { echo -e "${GREEN}${OK} $1${NC}"; ((PASS++)); }
-warn()  { echo -e "${YELLOW}${WARN} $1${NC}"; ((WARNINGS++)); }
-fail()  { echo -e "${RED}${FAIL} $1${NC}"; ((FAILURES++)); }
+pass()  { echo -e "${GREEN}${OK} $1${NC}"; ((PASS++)) || true; }
+warn()  { echo -e "${YELLOW}${WARN} $1${NC}"; ((WARNINGS++)) || true; }
+fail()  { echo -e "${RED}${FAIL} $1${NC}"; ((FAILURES++)) || true; }
 info()  { echo -e "${BLUE}${INFO} $1${NC}"; }
 header(){ echo -e "\n${BOLD}${CYAN}$1${NC}"; echo "$(printf '─%.0s' {1..55})"; }
 
