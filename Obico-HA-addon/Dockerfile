@@ -4,11 +4,11 @@ FROM ghcr.io/gabe565/obico:latest
 ARG USERNAME
 
 # Erstelle den Obico Benutzer und setze das Passwort
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN --mount=type=secret,id=PASSWORD \
     if [ -n "$USERNAME" ] && [ -f /run/secrets/PASSWORD ]; then \
-        PASSWORD=$(cat /run/secrets/PASSWORD) && \
         useradd -m -d /home/obico -s /bin/bash obico && \
-        echo "obico:$PASSWORD" | chpasswd ; \
+        sed 's/^/obico:/' /run/secrets/PASSWORD | chpasswd ; \
     fi
 
 # Setze den Arbeitsordner
