@@ -66,7 +66,7 @@
 | Test | Type | Status |
 |---|---|---|
 | Lock acquisition | Unit | 🟢 DONE |
-| Lock release | Unit | ⚪ TODO |
+| Lock release | Unit | 🟢 DONE |
 | Stale lock detection | Unit | ⚪ TODO |
 | Concurrent lock conflict | Integration | ⚪ TODO |
 
@@ -100,6 +100,7 @@ bash scripts/health-check.sh
 |---|---|---|---|
 | 2026-02-23 | Initial TESTS.md created | — | system-init |
 | 2026-06-26 | Added unit tests for lock acquisition in lock-manager.sh | `lock-manager.sh` | jules |
+| 2026-07-03 | Added unit tests for lock release in lock-manager.sh | `lock-manager.sh` | jules |
 
 ---
 
