@@ -22,6 +22,7 @@ def test_lock_manager_lock_validation():
 
         # Copy script to the temporary directory so its REPO_ROOT points to tmpdir
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -63,6 +64,7 @@ def test_lock_manager_lock_conflicts():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
 
@@ -106,6 +108,7 @@ def test_lock_manager_invalid_arguments():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -117,3 +120,84 @@ def test_lock_manager_invalid_arguments():
         )
         assert result.returncode == 1
         assert "Lock Manager \u2014 Usage" in result.stdout
+
+def test_lock_manager_stale_lock_detection():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        registry_file = tmp_path / ".agent" / "locks" / "LOCK_REGISTRY.md"
+        registry_file.write_text("")
+
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        past = now - datetime.timedelta(hours=5)
+        future = now + datetime.timedelta(hours=5)
+
+        lock_file.write_text(json.dumps({
+            "locks": [
+                {
+                    "id": "lock-stale",
+                    "file_or_folder": "test/stale",
+                    "type": "SOFT",
+                    "locked_by": "agent1",
+                    "expires_at": past.isoformat()
+                },
+                {
+                    "id": "lock-active",
+                    "file_or_folder": "test/active",
+                    "type": "SOFT",
+                    "locked_by": "agent2",
+                    "expires_at": future.isoformat()
+                },
+                {
+                    "id": "lock-hard",
+                    "file_or_folder": "test/hard",
+                    "type": "HARD",
+                    "locked_by": "human"
+                }
+            ]
+        }))
+
+        # Test clearing active lock
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "clear-stale", "lock-active"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Lock not stale yet" in result.stdout
+
+        # Test clearing HARD lock
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "clear-stale", "lock-hard"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Cannot clear HARD lock" in result.stdout
+
+        # Test clearing stale lock
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "clear-stale", "lock-stale"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 0
+        assert "Stale lock lock-stale cleared and logged" in result.stdout
+
+        # Verify lock was removed
+        data = json.loads(lock_file.read_text())
+        assert len(data["locks"]) == 2
+        lock_ids = [l["id"] for l in data["locks"]]
+        assert "lock-stale" not in lock_ids
+        assert "lock-active" in lock_ids
+        assert "lock-hard" in lock_ids
+
+        # Verify registry entry
+        registry_content = registry_file.read_text()
+        assert "Stale Clear" in registry_content
+        assert "lock-stale" in registry_content
