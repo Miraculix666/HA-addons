@@ -149,9 +149,11 @@ with open(".agent/locks/.locked") as f:
     data = json.load(f)
 
 found = None
-for l in data["locks"]:
+found_idx = -1
+for i, l in enumerate(data["locks"]):
     if l["id"] == lock_id:
         found = l
+        found_idx = i
         break
 
 if not found:
@@ -166,7 +168,7 @@ if found["locked_by"] != agent:
     print(f"\033[1;33m🟡 Lock owned by {found['locked_by']} — use handover protocol\033[0m")
     sys.exit(1)
 
-data["locks"].remove(found)
+del data["locks"][found_idx]
 now = datetime.datetime.now(datetime.timezone.utc).isoformat()
 data["last_updated"] = now
 data["updated_by"] = agent
@@ -204,9 +206,11 @@ with open(".agent/locks/.locked") as f:
     data = json.load(f)
 
 found = None
-for l in data["locks"]:
+found_idx = -1
+for i, l in enumerate(data["locks"]):
     if l["id"] == lock_id:
         found = l
+        found_idx = i
         break
 
 if not found:
@@ -224,7 +228,7 @@ if found.get("expires_at"):
         print(f"\033[1;33m🟡 Lock not stale yet (expires {exp.isoformat()}) — use release instead\033[0m")
         sys.exit(1)
 
-data["locks"].remove(found)
+del data["locks"][found_idx]
 data["last_updated"] = now.isoformat()
 data["updated_by"] = "maintainer-stale-clear"
 
