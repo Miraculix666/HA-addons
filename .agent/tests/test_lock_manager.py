@@ -22,6 +22,9 @@ def test_lock_manager_lock_validation():
 
         # Copy script to the temporary directory so its REPO_ROOT points to tmpdir
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -63,6 +66,9 @@ def test_lock_manager_lock_conflicts():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
 
@@ -106,6 +112,9 @@ def test_lock_manager_invalid_arguments():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -117,3 +126,44 @@ def test_lock_manager_invalid_arguments():
         )
         assert result.returncode == 1
         assert "Lock Manager \u2014 Usage" in result.stdout
+
+def test_lock_manager_concurrent_conflicts():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+        if colors_path.exists():
+            shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
+
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text('{"locks": []}')
+
+        procs = []
+        # Run 20 concurrent lock requests
+        for i in range(20):
+            p = subprocess.Popen(
+                ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "lock", "test/path", "SOFT", f"agent{i}", "reason"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                cwd=tmpdir
+            )
+            procs.append(p)
+
+        successes = 0
+        for p in procs:
+            p.wait()
+            if p.returncode == 0:
+                successes += 1
+
+        # Only one process should succeed in getting the lock
+        assert successes == 1
+
+        data = json.loads(lock_file.read_text())
+        assert len(data['locks']) == 1
+        assert data['locks'][0]['file_or_folder'] == "test/path"
