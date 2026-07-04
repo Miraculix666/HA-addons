@@ -59,7 +59,7 @@
 |---|---|---|
 | All required files exist | Unit | ⚪ TODO |
 | `.locked` valid JSON | Unit | ⚪ TODO |
-| No stale SOFT locks | Unit | ⚪ TODO |
+| No stale SOFT locks | Unit | 🟢 DONE |
 | Dump inbox check | Unit | ⚪ TODO |
 
 ### `scripts/lock-manager.sh`
@@ -100,6 +100,7 @@ bash scripts/health-check.sh
 |---|---|---|---|
 | 2026-02-23 | Initial TESTS.md created | — | system-init |
 | 2026-06-26 | Added unit tests for lock acquisition in lock-manager.sh | `lock-manager.sh` | jules |
+| 2026-07-03 | Added unit tests for no stale SOFT locks check in health-check.sh | `health-check.sh` | jules |
 
 ---
 
