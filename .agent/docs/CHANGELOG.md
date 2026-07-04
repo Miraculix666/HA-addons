@@ -91,3 +91,7 @@
 
 [Unreleased]: https://github.com/your-org/your-repo/compare/v1.0.0...HEAD
 [1.0.0]: https://github.com/your-org/your-repo/releases/tag/v1.0.0
+## [Unreleased] - 2026-07-04
+### Changed
+- `blueprints/automation/tibber_smart_device.yaml`: Replaced deprecated `service:` syntax with modern `action:` syntax.
+- `blueprints/scripts/universal_notification.yaml`: Replaced deprecated `notify.notify` and `notify.alexa_media` services with `notify.send_message` targeting corresponding entity_ids.

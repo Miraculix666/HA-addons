@@ -91,3 +91,8 @@ On session end:
 ---
 
 *This file is the living heartbeat of the project. Keep it accurate.*
+
+## 2026-07-04
+- Addressed issue with tibber price fetching automation and related scripts.
+- Updated `tibber_smart_device.yaml` to use modern `action:` syntax.
+- Updated `universal_notification.yaml` to use modern `notify.send_message` action instead of deprecated `notify.*` services.
