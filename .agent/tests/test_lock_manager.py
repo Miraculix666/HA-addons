@@ -22,6 +22,12 @@ def test_lock_manager_lock_validation():
 
         # Copy script to the temporary directory so its REPO_ROOT points to tmpdir
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "r") as f:
+            script_content = f.read()
+        script_content = script_content.replace('REGISTRY_FILE="$REPO_ROOT/.agent/locks/LOCK_REGISTRY.md"', 'REGISTRY_FILE=".agent/locks/LOCK_REGISTRY.md"')
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "w") as f:
+            f.write(script_content)
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -63,6 +69,12 @@ def test_lock_manager_lock_conflicts():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "r") as f:
+            script_content = f.read()
+        script_content = script_content.replace('REGISTRY_FILE="$REPO_ROOT/.agent/locks/LOCK_REGISTRY.md"', 'REGISTRY_FILE=".agent/locks/LOCK_REGISTRY.md"')
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "w") as f:
+            f.write(script_content)
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
 
@@ -106,6 +118,12 @@ def test_lock_manager_invalid_arguments():
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "r") as f:
+            script_content = f.read()
+        script_content = script_content.replace('REGISTRY_FILE="$REPO_ROOT/.agent/locks/LOCK_REGISTRY.md"', 'REGISTRY_FILE=".agent/locks/LOCK_REGISTRY.md"')
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "w") as f:
+            f.write(script_content)
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
         lock_file.write_text('{"locks": []}')
@@ -117,3 +135,94 @@ def test_lock_manager_invalid_arguments():
         )
         assert result.returncode == 1
         assert "Lock Manager \u2014 Usage" in result.stdout
+
+def test_lock_manager_release():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "r") as f:
+            script_content = f.read()
+        script_content = script_content.replace('REGISTRY_FILE="$REPO_ROOT/.agent/locks/LOCK_REGISTRY.md"', 'REGISTRY_FILE=".agent/locks/LOCK_REGISTRY.md"')
+        with open(tmp_path / ".agent" / "scripts" / "lock-manager.sh", "w") as f:
+            f.write(script_content)
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        registry_file = tmp_path / ".agent" / "locks" / "LOCK_REGISTRY.md"
+        registry_file.write_text("# Registry\n")
+
+        # In lock-manager.sh it resolves $REPO_ROOT using dirname $BASH_SOURCE
+        # and then hardcodes .agent/locks/.locked, so to make the test work
+        # cwd needs to be tmpdir, AND the tmp_path / ".agent" needs to be
+        # created where it's at. Actually `pwd` in the script will be `tmpdir` because we run with cwd=tmpdir.
+        # So we just run it directly.
+
+        # Test 1: Non-existent lock
+        lock_file.write_text('{"locks": []}')
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-missing", "agent1"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Lock lock-missing not found" in result.stdout
+
+        # Test 2: HARD lock
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-hard1",
+                "file_or_folder": "test/path",
+                "type": "HARD",
+                "locked_by": "agent1"
+            }]
+        }))
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-hard1", "agent1"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Cannot release HARD lock \u2014 requires human" in result.stdout
+
+        # Test 3: Lock owned by a different agent
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-soft1",
+                "file_or_folder": "test/path",
+                "type": "SOFT",
+                "locked_by": "agent2"
+            }]
+        }))
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-soft1", "agent1"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Lock owned by agent2" in result.stdout
+
+        # Test 4: Valid release
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-soft1",
+                "file_or_folder": "test/path",
+                "type": "SOFT",
+                "locked_by": "agent1",
+                "locked_at": "2023-01-01T00:00:00Z"
+            }]
+        }))
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-soft1", "agent1"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 0
+        assert "released and logged to registry" in result.stdout
+
+        # Assert lock removed
+        data = json.loads(lock_file.read_text())
+        assert len(data["locks"]) == 0
+
+        # Assert registry updated
+        registry_content = registry_file.read_text()
+        assert "| Lock ID | lock-soft1 |" in registry_content
