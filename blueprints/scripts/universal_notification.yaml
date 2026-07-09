@@ -1,7 +1,8 @@
+---
 blueprint:
   name: Universal Notification Engine
   description: >
-    Ein universelles Routing-Skript für Benachrichtigungen. 
+    Ein universelles Routing-Skript für Benachrichtigungen.
     Sendet Alarme dynamisch an Companion Apps, Web-UI, Alexa, Google Home, WhatsApp oder Telegram.
   domain: script
   input:
@@ -71,7 +72,9 @@ sequence:
           - condition: template
             value_template: "{{ use_companion }}"
         sequence:
-          - action: notify.notify
+          - action: notify.send_message
+            target:
+              entity_id: notify.notify
             data:
               title: "{{ title }}"
               message: "{{ message }}"
@@ -90,7 +93,9 @@ sequence:
           - condition: template
             value_template: "{{ use_alexa }}"
         sequence:
-          - action: notify.alexa_media
+          - action: notify.send_message
+            target:
+              entity_id: notify.alexa_media
             data:
               message: "{{ message }}"
               data:
