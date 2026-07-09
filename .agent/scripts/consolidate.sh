@@ -32,7 +32,7 @@ if command -v md5sum &>/dev/null || command -v md5 &>/dev/null; then
   HASH_CMD="md5sum"
   command -v md5 &>/dev/null && HASH_CMD="md5 -r"
   
-  DUPES=$(find . -not -path './.git/*' -type f -exec $HASH_CMD {} \; 2>/dev/null | \
+  DUPES=$(find . -not -path './.git/*' -type f -exec $HASH_CMD {} + 2>/dev/null | \
     sort | awk 'BEGIN{p=""} {if($1==p){print $2} p=$1}' | head -20)
   
   if [[ -z "$DUPES" ]]; then
