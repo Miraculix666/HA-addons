@@ -12,7 +12,7 @@ mkdir -p "$TEST_DIR/.agent/scripts"
 mkdir -p "$TEST_DIR/.agent/locks"
 
 # Copy the script to test dir so REPO_ROOT resolves correctly
-cp .agent/scripts/lock-manager.sh "$TEST_DIR/.agent/scripts/"
+cp -r .agent/scripts/* "$TEST_DIR/.agent/scripts/"
 LOCK_MGR="$TEST_DIR/.agent/scripts/lock-manager.sh"
 LOCK_FILE="$TEST_DIR/.agent/locks/.locked"
 
@@ -60,7 +60,7 @@ assert_lock_exists() {
 
   local count
   count=$(python3 -c "
-import json, sys
+import json
 with open('$LOCK_FILE') as f:
     data = json.load(f)
 found = sum(1 for l in data.get('locks', []) if l.get('file_or_folder') == '$path' and l.get('type') == '$type' and l.get('locked_by') == '$agent')
