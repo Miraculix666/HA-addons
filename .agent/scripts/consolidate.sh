@@ -12,7 +12,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 echo -e "${BOLD}${CYAN}"
@@ -40,7 +40,7 @@ if command -v md5sum &>/dev/null || command -v md5 &>/dev/null; then
   else
     echo -e "${YELLOW}🟡 Potential duplicate files:${NC}"
     echo "$DUPES" | while read -r f; do echo "   → $f"; done
-    ((ISSUES++))
+    ((ISSUES++)) || true
     PROPOSALS+=("Review and remove duplicate files listed above")
   fi
 else
@@ -60,7 +60,7 @@ else
     SIZE=$(du -sh "$f" | cut -f1)
     echo "   → $f ($SIZE)"
   done
-  ((ISSUES++))
+  ((ISSUES++)) || true
   PROPOSALS+=("Review large files — consider splitting or adding to .gitignore")
 fi
 
@@ -69,13 +69,13 @@ echo ""
 echo -e "${BOLD}[3/5] 📁 Empty Directory Check${NC}"
 echo "$(printf '─%.0s' {1..50})"
 EMPTY_DIRS=$(find . -not -path './.git/*' -type d -empty 2>/dev/null | \
-  grep -v "^.$" | grep -v "node_modules" | head -20)
+  grep -v "^.$" | grep -v "node_modules" | head -20 || true)
 if [[ -z "$EMPTY_DIRS" ]]; then
   echo -e "${GREEN}✅ No empty directories${NC}"
 else
   echo -e "${YELLOW}🟡 Empty directories (add .gitkeep or remove):${NC}"
   echo "$EMPTY_DIRS" | while read -r d; do echo "   → $d"; done
-  ((ISSUES++))
+  ((ISSUES++)) || true
   PROPOSALS+=("Add .gitkeep to empty directories or remove them")
 fi
 
@@ -88,12 +88,12 @@ ALL_GOOD=true
 for doc in "${REQUIRED_DOCS[@]}"; do
   if [[ -f "$doc" ]]; then
     # Check last modified vs git log
-    LAST_GIT=$(git log -1 --format="%ci" -- "$doc" 2>/dev/null | cut -d' ' -f1 || echo "unknown")
+    LAST_GIT=$(git log -1 --format="%ci" -- "$doc" 2>/dev/null | cut -d' ' -f1 || true)
     echo -e "  ${GREEN}✅ $doc${NC} (last commit: $LAST_GIT)"
   else
     echo -e "  ${RED}❌ MISSING: $doc${NC}"
     ALL_GOOD=false
-    ((ISSUES++))
+    ((ISSUES++)) || true
     PROPOSALS+=("Recreate missing documentation file: $doc")
   fi
 done
