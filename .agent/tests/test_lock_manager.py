@@ -152,3 +152,33 @@ def test_lock_manager_history_injection():
         )
         assert result.returncode == 1
         assert "Invalid history count: must be a positive integer" in result.stderr
+
+def test_lock_manager_release_unowned_lock():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-123",
+                "file_or_folder": "test/path",
+                "type": "SOFT",
+                "locked_by": "agentA"
+            }]
+        }))
+
+        registry_file = tmp_path / ".agent" / "locks" / "LOCK_REGISTRY.md"
+        registry_file.write_text('')
+
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-123", "agentB"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Lock owned by agentA" in result.stdout
