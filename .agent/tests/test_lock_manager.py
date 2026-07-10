@@ -152,3 +152,63 @@ def test_lock_manager_history_injection():
         )
         assert result.returncode == 1
         assert "Invalid history count: must be a positive integer" in result.stderr
+
+def test_lock_manager_status():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+
+        import datetime
+        now = datetime.datetime.now(datetime.timezone.utc)
+        future = (now + datetime.timedelta(hours=2)).isoformat()
+
+        test_data = {
+            "last_updated": now.isoformat(),
+            "locks": [
+                {
+                    "id": "lock-hard123",
+                    "file_or_folder": "config.yaml",
+                    "type": "HARD",
+                    "locked_by": "admin",
+                    "expires_at": "never"
+                },
+                {
+                    "id": "lock-soft456",
+                    "file_or_folder": "test.txt",
+                    "type": "SOFT",
+                    "locked_by": "agent1",
+                    "expires_at": future
+                }
+            ]
+        }
+        lock_file.write_text(json.dumps(test_data))
+
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "status"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+
+        assert result.returncode == 0
+        assert "Current Lock State" in result.stdout
+        assert "lock-hard12" in result.stdout # Due to truncation in the script [:11]
+        assert "config.yaml" in result.stdout
+        assert "HARD" in result.stdout
+        assert "lock-soft45" in result.stdout # Due to truncation in the script [:11]
+        assert "test.txt" in result.stdout
+        assert "SOFT" in result.stdout
+
+        # Test no locks scenario
+        lock_file.write_text(json.dumps({"locks": [], "last_updated": now.isoformat()}))
+        result_empty = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "status"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result_empty.returncode == 0
+        assert "No active locks" in result_empty.stdout
