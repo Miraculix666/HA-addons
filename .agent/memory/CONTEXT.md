@@ -96,3 +96,4 @@ On session end:
 - Addressed issue with tibber price fetching automation and related scripts.
 - Updated `tibber_smart_device.yaml` to use modern `action:` syntax.
 - Updated `universal_notification.yaml` to use modern `notify.send_message` action instead of deprecated `notify.*` services.
+- Removed hardcoded personal device entity_id `notify.mobile_app_marius_mi_15t_pro` from `blueprints/scripts/universal_notification.yaml`.
