@@ -1,0 +1,86 @@
+---
+blueprint:
+  name: Pool Notlauf (Emergency Fallback)
+  description: >
+    Notlauf Automatisierung für den Pool.
+    Die Pumpe läuft 3 Stunden ab 13:00 Uhr und 1 Stunde ab 23:00 Uhr,
+    falls die smarte Steuerung fehlschlägt oder überschrieben werden soll.
+  domain: automation
+  input:
+    target_entity:
+      name: Poolpumpe (Switch)
+      description: Der Schalter für die Poolpumpe.
+      selector:
+        entity:
+          domain: switch
+    day_start_time:
+      name: Startzeit Tag
+      description: Startzeit für den Lauf am Tag (z.B. 13:00:00).
+      default: "13:00:00"
+      selector:
+        time:
+    day_duration_hours:
+      name: Dauer Tag (Stunden)
+      description: Wie lange die Pumpe am Tag laufen soll (z.B. 3 Stunden).
+      default: 3.0
+      selector:
+        number:
+          min: 0.5
+          max: 12.0
+          step: 0.5
+          unit_of_measurement: h
+          mode: slider
+    night_start_time:
+      name: Startzeit Nacht
+      description: Startzeit für den Lauf in der Nacht (z.B. 23:00:00).
+      default: "23:00:00"
+      selector:
+        time:
+    night_duration_hours:
+      name: Dauer Nacht (Stunden)
+      description: Wie lange die Pumpe in der Nacht laufen soll (z.B. 1 Stunde).
+      default: 1.0
+      selector:
+        number:
+          min: 0.5
+          max: 12.0
+          step: 0.5
+          unit_of_measurement: h
+          mode: slider
+
+mode: restart
+
+trigger:
+  - platform: time
+    at: !input day_start_time
+    id: "day_start"
+  - platform: time
+    at: !input night_start_time
+    id: "night_start"
+
+action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: "day_start"
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input target_entity
+          - delay:
+              hours: !input day_duration_hours
+          - action: switch.turn_off
+            target:
+              entity_id: !input target_entity
+      - conditions:
+          - condition: trigger
+            id: "night_start"
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input target_entity
+          - delay:
+              hours: !input night_duration_hours
+          - action: switch.turn_off
+            target:
+              entity_id: !input target_entity

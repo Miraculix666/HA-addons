@@ -111,3 +111,6 @@ bash scripts/health-check.sh
 - Mock strategy prompt: `prompts.config.md` → `mock-strategy`
 
 *Always update coverage table after adding/removing tests. Cascade check: CHANGELOG.md*
+
+## Test Change Log
+- Added HA blueprints for Tibber Pool Pump control. Yamllint validation passed. No dedicated python/shell tests for these files as they are YAML blueprints, but verified the structural validity and logic according to HA standards.
