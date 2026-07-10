@@ -1,0 +1,75 @@
+---
+blueprint:
+  name: Tibber Pool Pumpensteuerung (Smart)
+  description: >
+    Intelligente Poolsteuerung basierend auf Tibber-Preisen.
+    Beachtet Jahreszeiten, Sonneneinstrahlung und Temperatur.
+    Im Hochsommer wird der Tag in 8 Intervalle geteilt, um eine Mindestlaufzeit (Standard 4h)
+    zu gewährleisten (mind. 15min pro Achtel). Die Pumpe läuft in den jeweils günstigsten Zeiten.
+    Bei negativen Preisen wird die Pumpe sofort eingeschaltet (falls konfiguriert).
+  domain: automation
+  input:
+    target_entity:
+      name: Poolpumpe (Switch)
+      description: Der Schalter für die Poolpumpe.
+      selector:
+        entity:
+          domain: switch
+    duration_hours:
+      name: Mindestlaufzeit pro Tag (Stunden)
+      description: Die minimale Laufzeit pro Tag (z.B. im Sommer 4h).
+      default: 4.0
+      selector:
+        number:
+          min: 1.0
+          max: 24.0
+          step: 0.5
+          unit_of_measurement: h
+          mode: slider
+    season_sensor:
+      name: Jahreszeiten Sensor
+      description: Sensor für die aktuelle Jahreszeit (z.B. sensor.season).
+      selector:
+        entity:
+          domain: sensor
+    solar_radiation:
+      name: Sonneneinstrahlung (Lux / W/m²)
+      description: Sensor für die aktuelle Sonneneinstrahlung.
+      selector:
+        entity:
+          domain: sensor
+    temperature_sensor:
+      name: Temperatur (Außen/Wasser)
+      description: Sensor für die relevante Temperatur.
+      selector:
+        entity:
+          domain: sensor
+    negative_prices_always_on:
+      name: Bei negativen Preisen immer an
+      description: Schaltet die Pumpe unabhängig vom Intervall ein, wenn der Strompreis negativ ist.
+      default: true
+      selector:
+        boolean:
+
+mode: restart
+
+trigger:
+  - platform: time_pattern
+    minutes: "/15"
+  - platform: homeassistant
+    event: start
+  - platform: event
+    event_type: "tibber_force_evaluation"
+
+action:
+  # The actual evaluation is handed over to a pyscript because finding the cheapest 15-minute
+  # block inside eight 3-hour windows over 24h dynamically from an external Tibber API using
+  # just Jinja2 in YAML is too complex. We align with the existing `tibber_smart_device.yaml`.
+  - action: pyscript.tibber_evaluate_pool
+    data:
+      target_entity: !input target_entity
+      hours: !input duration_hours
+      season_sensor: !input season_sensor
+      solar_radiation: !input solar_radiation
+      temperature_sensor: !input temperature_sensor
+      negative_prices_always_on: !input negative_prices_always_on

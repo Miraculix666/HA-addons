@@ -95,3 +95,8 @@
 ### Changed
 - `blueprints/automation/tibber_smart_device.yaml`: Replaced deprecated `service:` syntax with modern `action:` syntax.
 - `blueprints/scripts/universal_notification.yaml`: Replaced deprecated `notify.notify` and `notify.alexa_media` services with `notify.send_message` targeting corresponding entity_ids.
+## [Unreleased]
+
+### Added
+- Added `blueprints/automation/tibber_pool_pump.yaml` for smart pool pump automation based on Tibber prices.
+- Added `blueprints/automation/tibber_pool_pump_emergency.yaml` for fallback pool pump scheduling.

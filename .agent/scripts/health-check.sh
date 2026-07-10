@@ -3,7 +3,7 @@
 # FILE: scripts/health-check.sh
 # PURPOSE: Validate framework integrity — all docs in sync,
 #          no stale locks, branches configured, dump clear
-# DEPENDS ON: .agent/locks/.locked, all docs/
+# DEPENDS ON: .agent/locks/.locked, all .agent/docs/
 # DEPENDED ON BY: CI/CD pipelines, Maintainer agents (R-05)
 # LAST MODIFIED: See git log
 # ============================================================
@@ -50,12 +50,12 @@ REQUIRED_FILES=(
   ".agent/locks/LOCK_REGISTRY.md"
   ".agent/memory/CONTEXT.md"
   ".agent/memory/DECISIONS.md"
-  "docs/CHANGELOG.md"
-  "docs/DEPENDENCIES.md"
-  "docs/TESTS.md"
-  "docs/ARCHITECTURE.md"
-  "docs/SOURCES.md"
-  "dump/README.md"
+  ".agent/docs/CHANGELOG.md"
+  ".agent/docs/DEPENDENCIES.md"
+  ".agent/docs/TESTS.md"
+  ".agent/docs/ARCHITECTURE.md"
+  ".agent/docs/SOURCES.md"
+  ".agent/dump/README.md"
 )
 for f in "${REQUIRED_FILES[@]}"; do
   if [[ -f "$f" ]]; then
@@ -112,12 +112,12 @@ fi
 
 # ── [3/6] Dump Inbox ─────────────────────────────────────────
 header "[3/6] 📥 Dump Inbox Check"
-INBOX_FILES=$(find dump/inbox/ -type f 2>/dev/null | wc -l)
+INBOX_FILES=$(find .agent/dump/inbox/ -type f 2>/dev/null | wc -l)
 if [[ "$INBOX_FILES" -eq 0 ]]; then
   pass "Dump inbox is empty 🟢"
 else
   warn "Dump inbox has $INBOX_FILES file(s) awaiting processing"
-  find dump/inbox/ -type f | while read -r f; do
+  find .agent/dump/inbox/ -type f | while read -r f; do
     echo -e "     ${YELLOW}→ $f${NC}"
   done
   echo -e "  ${YELLOW}Run: bash scripts/dump-processor.sh${NC}"
@@ -163,7 +163,7 @@ fi
 
 # ── [6/6] Doc Headers Spot Check ─────────────────────────────
 header "[6/6] 📝 Documentation Spot Check"
-for f in docs/CHANGELOG.md docs/DEPENDENCIES.md docs/TESTS.md; do
+for f in .agent/docs/CHANGELOG.md .agent/docs/DEPENDENCIES.md .agent/docs/TESTS.md; do
   if grep -q "LAST MODIFIED" "$f" 2>/dev/null; then
     pass "$f has required header fields"
   else
