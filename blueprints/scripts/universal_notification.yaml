@@ -79,14 +79,6 @@ sequence:
               title: "{{ title }}"
               message: "{{ message }}"
             continue_on_error: true
-          # Fallback specific service if generic fails
-          - action: notify.send_message
-            target:
-              entity_id: notify.mobile_app_marius_mi_15t_pro
-            data:
-              title: "{{ title }}"
-              message: "{{ message }}"
-            continue_on_error: true
 
   - choose:
       - conditions:
