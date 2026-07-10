@@ -152,3 +152,41 @@ def test_lock_manager_history_injection():
         )
         assert result.returncode == 1
         assert "Invalid history count: must be a positive integer" in result.stderr
+
+def test_lock_manager_check():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+
+        # Test file with no locks
+        lock_file.write_text(json.dumps({"locks": []}))
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "check", "test/path"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 0
+        assert "No lock on test/path \u2014 safe to acquire" in result.stdout
+
+        # Test file with a lock
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-hard1",
+                "file_or_folder": "test/path",
+                "type": "HARD",
+                "locked_by": "human",
+                "expires_at": "never"
+            }]
+        }))
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "check", "test/path"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 0
+        assert "Locked: lock-hard1 | Type: HARD | By: human | Expires: never" in result.stdout
