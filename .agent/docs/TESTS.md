@@ -65,6 +65,7 @@
 ### `scripts/lock-manager.sh`
 | Test | Type | Status |
 |---|---|---|
+| cmd_status output format | Unit | 🟢 DONE |
 | Lock acquisition | Unit | 🟢 DONE |
 | Lock release | Unit | 🟢 DONE |
 | Stale lock detection | Unit | ⚪ TODO |
@@ -98,6 +99,7 @@ bash scripts/health-check.sh
 
 | Date | Change | Affected Tests | Author |
 |---|---|---|---|
+| 2026-07-10 | Added unit test for lock-manager.sh status command | `lock-manager.sh` | jules |
 | 2026-02-23 | Initial TESTS.md created | — | system-init |
 | 2026-06-26 | Added unit tests for lock acquisition in lock-manager.sh | `lock-manager.sh` | jules |
 | 2026-07-03 | Added unit tests for no stale SOFT locks check in health-check.sh | `health-check.sh` | jules |
