@@ -8,7 +8,6 @@
   "boot": "auto",
   "init": false,
   "stdin": true,
-  "host_network": true,
   "privileged": true,
   "map": ["config:rw", "ssl:ro"],
   "options": {
@@ -27,5 +26,8 @@
         "title": "Obico Passwort"
       }
     }
+  },
+  "ports": {
+    "3334/tcp": 3334
   }
 }
