@@ -1,8 +1,15 @@
+🧹 [Code Health] Remove unused sys import in test_script2.py
+
 🎯 **What:**
-Removed an `eval` injection vulnerability in `.agent/scripts/health-check.sh` where it read Python script outputs using `eval`. Replaced it with a safer standard array mapping method (`mapfile`).
+Removed the unused `sys` module import in `test_script2.py`.
 
-⚠️ **Risk:**
-Using `eval` on dynamic output can lead to arbitrary command execution if an attacker somehow manipulates the JSON input or environment variables. This creates a severe vector for privilege escalation and un-authorized code execution.
+💡 **Why:**
+The script was only opening and reading a file and printing some of its content. `sys` was completely unused. Removing unused imports helps reduce visual noise and improves the overall readability of the code, and is good practice.
 
-🛡️ **Solution:**
-Swapped `eval "$(python3 ...)"` out in favor of safely writing output to standard out using `print(...)` and reading the outputs securely into a bash array using `mapfile -t stats <<< "$(python3 -c "...")"`. Additionally, modified the Python tests (`.agent/tests/test_lock_manager.py`) to correctly mock the `colors.sh` dependency, ensuring the full test suite passes.
+✅ **Verification:**
+- Ran the script manually to ensure it still prints the last 500 characters of the health check script.
+- Ran the agent tests (`pytest .agent/tests/`) to ensure no regressions were introduced.
+- Verified diff to ensure only the import was removed.
+
+✨ **Result:**
+Cleaner code in `test_script2.py` with no unused dependencies.
