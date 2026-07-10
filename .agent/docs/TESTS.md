@@ -14,7 +14,7 @@
 | Module | Unit Tests | Integration | E2E | Coverage % | Status |
 |---|---|---|---|---|---|
 | `.agent/` framework | N/A (docs) | N/A | Manual | — | 🟡 Manual only |
-| `scripts/` | 🟡 Partial | ⚪ None | ⚪ None | ~40% | 🟡 Needs work |
+| `scripts/` | 🟡 Partial | ⚪ None | ⚪ None | ~60% | 🟡 Needs work |
 | `src/` (your code) | ⚪ None yet | ⚪ None yet | ⚪ None yet | 0% | ⚪ Not started |
 
 ---
@@ -62,6 +62,14 @@
 | No stale SOFT locks | Unit | 🟢 DONE |
 | Dump inbox check | Unit | ⚪ TODO |
 
+### `scripts/dump-processor.sh`
+| Test | Type | Status |
+|---|---|---|
+| Empty inbox | Unit | 🟢 DONE |
+| Files in inbox | Unit | 🟢 DONE |
+| Auto list mode | Unit | 🟢 DONE |
+| Process mode | Unit | 🟢 DONE |
+
 ### `scripts/lock-manager.sh`
 | Test | Type | Status |
 |---|---|---|
@@ -102,6 +110,7 @@ bash scripts/health-check.sh
 | 2026-06-26 | Added unit tests for lock acquisition in lock-manager.sh | `lock-manager.sh` | jules |
 | 2026-07-03 | Added unit tests for no stale SOFT locks check in health-check.sh | `health-check.sh` | jules |
 | 2026-07-10 | Added unit test for lock-manager.sh release with missing lock | `lock-manager.sh` | jules |
+| 2026-07-10 | Added unit tests for dump-processor.sh | `dump-processor.sh` | jules |
 
 ---
 

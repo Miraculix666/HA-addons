@@ -11,7 +11,7 @@ set -euo pipefail
 
 source "$(dirname "${BASH_SOURCE[0]}")/colors.sh"
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 INBOX="$REPO_ROOT/dump/inbox"
 PROCESSED="$REPO_ROOT/dump/processed"
 
