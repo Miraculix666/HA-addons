@@ -1,8 +1,10 @@
-🎯 **What:**
-Removed an `eval` injection vulnerability in `.agent/scripts/health-check.sh` where it read Python script outputs using `eval`. Replaced it with a safer standard array mapping method (`mapfile`).
+🔒 [Security Fix] Remove hardcoded personal device entity_id
 
-⚠️ **Risk:**
-Using `eval` on dynamic output can lead to arbitrary command execution if an attacker somehow manipulates the JSON input or environment variables. This creates a severe vector for privilege escalation and un-authorized code execution.
+### 🎯 What
+Removed the hardcoded personal device entity ID (`notify.mobile_app_marius_mi_15t_pro`) from the fallback action in the `universal_notification.yaml` blueprint.
 
-🛡️ **Solution:**
-Swapped `eval "$(python3 ...)"` out in favor of safely writing output to standard out using `print(...)` and reading the outputs securely into a bash array using `mapfile -t stats <<< "$(python3 -c "...")"`. Additionally, modified the Python tests (`.agent/tests/test_lock_manager.py`) to correctly mock the `colors.sh` dependency, ensuring the full test suite passes.
+### ⚠️ Risk
+If left unfixed, this blueprint would inadvertently send notification data (which may contain sensitive information depending on the caller) to a specific, hardcoded personal device, regardless of who installed or used the blueprint.
+
+### 🛡️ Solution
+Removed the fallback action block completely. The preceding action already broadcasts to `notify.notify` (which targets all registered companion app devices) dynamically. Removing the hardcoded fallback prevents data leakage while preserving the intended generic notification functionality.
