@@ -69,6 +69,7 @@
 | Lock release | Unit | ⚪ TODO |
 | Stale lock detection | Unit | ⚪ TODO |
 | Concurrent lock conflict | Integration | ⚪ TODO |
+| Lock status check (`cmd_check`) | Unit | 🟢 DONE |
 
 ---
 
@@ -101,6 +102,7 @@ bash scripts/health-check.sh
 | 2026-02-23 | Initial TESTS.md created | — | system-init |
 | 2026-06-26 | Added unit tests for lock acquisition in lock-manager.sh | `lock-manager.sh` | jules |
 | 2026-07-03 | Added unit tests for no stale SOFT locks check in health-check.sh | `health-check.sh` | jules |
+| 2026-07-10 | Added unit tests for lock status check in lock-manager.sh | `lock-manager.sh` | jules |
 
 ---
 
