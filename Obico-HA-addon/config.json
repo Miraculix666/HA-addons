@@ -9,7 +9,6 @@
   "init": false,
   "stdin": true,
   "host_network": true,
-  "privileged": true,
   "map": ["config:rw", "ssl:ro"],
   "options": {
     "username": "",
