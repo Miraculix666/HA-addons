@@ -13,6 +13,8 @@
 > Changes staged for next release
 
 ### Added
+### Added
+- Added optional counter entity input to Tibber automations (`tibber_smart_device.yaml`, `tibber_pool_pump.yaml`, `tibber_pool_pump_emergency.yaml`).
 - (nothing yet)
 
 ---

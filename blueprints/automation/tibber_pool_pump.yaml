@@ -51,6 +51,14 @@ blueprint:
       selector:
         boolean:
 
+    counter_entity:
+      name: Zähler (Optional)
+      description: Zähler, der bei jedem Lauf inkrementiert wird.
+      default: ""
+      selector:
+        entity:
+          domain: counter
+
 mode: restart
 
 trigger:
@@ -73,3 +81,4 @@ action:
       solar_radiation: !input solar_radiation
       temperature_sensor: !input temperature_sensor
       negative_prices_always_on: !input negative_prices_always_on
+      counter_entity: !input counter_entity

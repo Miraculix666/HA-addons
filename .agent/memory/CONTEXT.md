@@ -92,6 +92,8 @@ On session end:
 
 *This file is the living heartbeat of the project. Keep it accurate.*
 
+## 2026-07-12
+- Added optional counter entity input to Tibber automations (`tibber_smart_device.yaml`, `tibber_pool_pump.yaml`, `tibber_pool_pump_emergency.yaml`).
 ## 2026-07-04
 - Addressed issue with tibber price fetching automation and related scripts.
 - Updated `tibber_smart_device.yaml` to use modern `action:` syntax.

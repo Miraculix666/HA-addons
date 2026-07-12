@@ -39,6 +39,14 @@ blueprint:
       selector:
         time:
 
+    counter_entity:
+      name: Zähler (Optional)
+      description: Zähler, der bei jedem Lauf inkrementiert wird.
+      default: ""
+      selector:
+        entity:
+          domain: counter
+
 mode: restart
 
 trigger:
@@ -59,3 +67,4 @@ action:
       hours: !input duration_hours
       start_time: !input start_time
       end_time: !input end_time
+      counter_entity: !input counter_entity

@@ -48,6 +48,14 @@ blueprint:
           unit_of_measurement: h
           mode: slider
 
+    counter_entity:
+      name: Zähler (Optional)
+      description: Zähler, der bei jedem Lauf inkrementiert wird.
+      default: ""
+      selector:
+        entity:
+          domain: counter
+
 mode: restart
 
 trigger:
@@ -58,6 +66,9 @@ trigger:
     at: !input night_start_time
     id: "night_start"
 
+variables:
+  counter_ent: !input counter_entity
+
 action:
   - choose:
       - conditions:
@@ -67,6 +78,14 @@ action:
           - action: switch.turn_on
             target:
               entity_id: !input target_entity
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ counter_ent != '' }}"
+                sequence:
+                  - action: counter.increment
+                    target:
+                      entity_id: "{{ counter_ent }}"
           - delay:
               hours: !input day_duration_hours
           - action: switch.turn_off
@@ -79,6 +98,14 @@ action:
           - action: switch.turn_on
             target:
               entity_id: !input target_entity
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ counter_ent != '' }}"
+                sequence:
+                  - action: counter.increment
+                    target:
+                      entity_id: "{{ counter_ent }}"
           - delay:
               hours: !input night_duration_hours
           - action: switch.turn_off
