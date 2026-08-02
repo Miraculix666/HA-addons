@@ -11,7 +11,7 @@ def run_cmd(cmd):
 
 def update_host():
     print("Updating Proxmox Host...")
-    run_cmd("apt-get update -qq && apt-get dist-upgrade -y")
+    run_cmd("apt-get update -qq && DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a apt-get dist-upgrade -y")
     print("Host updated.")
 
 def start_and_wait_lxc(vmid):
