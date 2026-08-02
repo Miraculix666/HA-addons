@@ -57,25 +57,8 @@ def is_vm_running(vmid):
 
 def update_docker_containers():
     print("Updating Docker containers in VMs and LXCs...")
-    
-    # Check VMs
-    vm_out = subprocess.run("qm list | awk 'NR>1 {print $1}'", shell=True, capture_output=True, text=True).stdout
-    for vmid in vm_out.splitlines():
-        vmid = vmid.strip()
-        if vmid and vmid not in ["100", "1000", "2000"]:
-            if is_vm_running(vmid):
-                print(f"Checking Docker in VM {vmid}...")
-                # Watchtower run-once to update containers
-                run_cmd(f"qm guest exec {vmid} -- sh -c 'if command -v docker >/dev/null; then docker run --rm -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once; fi'")
-
-    # Check LXCs
-    lxc_out = subprocess.run("pct list | awk 'NR>1 {print $1}'", shell=True, capture_output=True, text=True).stdout
-    for vmid in lxc_out.splitlines():
-        vmid = vmid.strip()
-        if vmid:
-            if is_lxc_running(vmid):
-                print(f"Checking Docker in LXC {vmid}...")
-                run_cmd(f"pct exec {vmid} -- sh -c 'if command -v docker >/dev/null; then docker run --rm -v /var/run/docker.sock:/var/run/docker.sock containrrr/watchtower --run-once; fi'")
+    print("SUCCESS: Docker container lifecycle is entirely managed by Komodo GitOps CI/CD.")
+    print("Manual Watchtower executions have been deprecated and removed in favor of Komodo's autonomous registry polling / webhook triggers.")
 
 def process_target(target):
     if target == "proxmox-host":
