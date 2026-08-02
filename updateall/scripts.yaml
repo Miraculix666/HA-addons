@@ -57,8 +57,6 @@ c_03_zha_quirks_update:
   alias: 'Update: C_03 ZHA Quirks, OTA & Blueprints'
   icon: mdi:zigbee
   sequence:
-  - action: zha_autoupdate.update
-    data: {}
   - action: blueprints_updater.update_all
     data: {}
   - action: update.install
