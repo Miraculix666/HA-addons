@@ -61,6 +61,15 @@ blueprint:
 
 mode: restart
 
+variables:
+  target_entity_var: !input target_entity
+  duration_hours_var: !input duration_hours
+  season_sensor_var: !input season_sensor
+  solar_radiation_var: !input solar_radiation
+  temperature_sensor_var: !input temperature_sensor
+  negative_prices_always_on_var: !input negative_prices_always_on
+  counter_entity_var: !input counter_entity
+
 trigger:
   - platform: time_pattern
     minutes: "/15"
@@ -70,15 +79,44 @@ trigger:
     event_type: "tibber_force_evaluation"
 
 action:
+  - condition: template
+
+    value_template: >-
+
+      {{ target_entity_var is match("^switch\\.[a-z0-9_]+$") }}
+
+  - condition: template
+
+    value_template: >-
+
+      {{ counter_entity_var == "" or counter_entity_var is match("^counter\\.[a-z0-9_]+$") }}
+
+  - condition: template
+
+    value_template: >-
+
+      {{ season_sensor_var is match("^sensor\\.[a-z0-9_]+$") }}
+
+  - condition: template
+
+    value_template: >-
+
+      {{ solar_radiation_var is match("^sensor\\.[a-z0-9_]+$") }}
+
+  - condition: template
+
+    value_template: >-
+
+      {{ temperature_sensor_var is match("^sensor\\.[a-z0-9_]+$") }}
   # The actual evaluation is handed over to a pyscript because finding the cheapest 15-minute
   # block inside eight 3-hour windows over 24h dynamically from an external Tibber API using
   # just Jinja2 in YAML is too complex. We align with the existing `tibber_smart_device.yaml`.
   - action: pyscript.tibber_evaluate_pool
     data:
-      target_entity: !input target_entity
-      hours: !input duration_hours
-      season_sensor: !input season_sensor
-      solar_radiation: !input solar_radiation
-      temperature_sensor: !input temperature_sensor
-      negative_prices_always_on: !input negative_prices_always_on
-      counter_entity: !input counter_entity
+      target_entity: "{{ target_entity_var }}"
+      hours: "{{ duration_hours_var }}"
+      season_sensor: "{{ season_sensor_var }}"
+      solar_radiation: "{{ solar_radiation_var }}"
+      temperature_sensor: "{{ temperature_sensor_var }}"
+      negative_prices_always_on: "{{ negative_prices_always_on_var }}"
+      counter_entity: "{{ counter_entity_var }}"
