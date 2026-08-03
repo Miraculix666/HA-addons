@@ -273,3 +273,45 @@ def test_lock_manager_clear_stale():
         assert "cleared and logged" in result.stdout
         data = json.loads(lock_file.read_text())
         assert len(data["locks"]) == 0
+
+
+def test_lock_manager_concurrent_conflicts():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text('{"locks": []}')
+
+        processes = []
+        # Run multiple lock acquisitions concurrently for the same path but different agents
+        for i in range(10):
+            p = subprocess.Popen(
+                ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "lock", "test/path", "SOFT", f"agent{i}", "reason"],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, cwd=tmpdir
+            )
+            processes.append(p)
+
+        success = 0
+        conflicts = 0
+        for p in processes:
+            p.wait()
+            out = p.stdout.read()
+            if p.returncode == 0:
+                success += 1
+            else:
+                conflicts += 1
+                assert "initiate HANDOVER protocol" in out or "HARD lock on test/path — cannot acquire" in out or p.returncode == 1
+
+        # Only one should succeed, others should fail due to conflict
+        assert success == 1
+        assert conflicts == 9
+
+        with open(lock_file) as f:
+            data = json.load(f)
+            assert len(data["locks"]) == 1
