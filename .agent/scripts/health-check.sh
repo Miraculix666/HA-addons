@@ -69,30 +69,30 @@ done
 header "[2/6] 🔒 Lock File Validation"
 LOCK_FILE=".agent/locks/.locked"
 if command -v python3 &>/dev/null; then
-  if python3 -c "import json; json.load(open('$LOCK_FILE'))" 2>/dev/null; then
-    pass ".locked is valid JSON"
-    NOW=$(date +%s)
-    mapfile -t stats <<< "$(python3 -c "
-import json, datetime
+  NOW=$(date +%s)
+  if python3_out=$(python3 -c "
+import json, datetime, sys
 try:
     with open('$LOCK_FILE') as f:
         data = json.load(f)
-    locks = data.get('locks', [])
-    hard = sum(1 for l in locks if l.get('type') == 'HARD')
-    soft = sum(1 for l in locks if l.get('type') == 'SOFT')
-    stale = []
-    for l in locks:
-        if l.get('type') in ('SOFT', 'REQ') and l.get('expires_at'):
-            exp = datetime.datetime.fromisoformat(l['expires_at'].replace('Z','+00:00'))
-            if exp.timestamp() < $NOW:
-                stale.append(l['id'])
-    print(len(locks))
-    print(hard)
-    print(soft)
-    print(','.join(stale))
 except Exception:
-    pass
-")"
+    sys.exit(1)
+locks = data.get('locks', [])
+hard = sum(1 for l in locks if l.get('type') == 'HARD')
+soft = sum(1 for l in locks if l.get('type') == 'SOFT')
+stale = []
+for l in locks:
+    if l.get('type') in ('SOFT', 'REQ') and l.get('expires_at'):
+        exp = datetime.datetime.fromisoformat(l['expires_at'].replace('Z','+00:00'))
+        if exp.timestamp() < $NOW:
+            stale.append(l['id'])
+print(len(locks))
+print(hard)
+print(soft)
+print(','.join(stale))
+" 2>/dev/null); then
+    pass ".locked is valid JSON"
+    mapfile -t stats <<< "$python3_out"
     LOCK_COUNT="${stats[0]:-0}"
     HARD_COUNT="${stats[1]:-0}"
     SOFT_COUNT="${stats[2]:-0}"
