@@ -273,3 +273,41 @@ def test_lock_manager_clear_stale():
         assert "cleared and logged" in result.stdout
         data = json.loads(lock_file.read_text())
         assert len(data["locks"]) == 0
+
+def test_lock_manager_no_python3():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text('{"locks": []}')
+
+        mock_path = tmp_path / "mock_bin"
+        os.makedirs(mock_path)
+
+        # Mock PATH by creating a minimal PATH environment
+        # We need bash to run the script and potentially other builtins, but they are builtins.
+        # Actually, if we just set PATH to an empty dir, it will fail to find bash.
+        # So we just symlink bash and dirname which are explicitly used before the python3 check.
+        bash_path = shutil.which("bash")
+        dirname_path = shutil.which("dirname")
+        if bash_path:
+            os.symlink(bash_path, mock_path / "bash")
+        if dirname_path:
+            os.symlink(dirname_path, mock_path / "dirname")
+
+
+        env = os.environ.copy()
+        env["PATH"] = str(mock_path)
+
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "status"],
+            capture_output=True, text=True, cwd=tmpdir, env=env
+        )
+        assert result.returncode == 1
+        assert "python3 required for lock-manager" in result.stdout or "python3 is required to parse locks" in result.stdout or "python3 required for lock-manager" in result.stderr
