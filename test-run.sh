@@ -1,1 +1,2 @@
-echo "Tests pass"
+#!/bin/bash
+pytest .agent/tests/

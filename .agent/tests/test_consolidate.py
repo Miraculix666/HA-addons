@@ -134,3 +134,28 @@ def test_reset_counter():
         content = (tmp_path / ".agent" / "memory" / "CONTEXT.md").read_text()
         assert "Sessions Since Last Consolidation Review | 0" in content
         assert "Reset consolidation counter to 0 in CONTEXT.md" in result.stdout
+
+def test_empty_directories_error_path():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        setup_mock_repo(tmp_path)
+
+        # Create an empty directory
+        os.makedirs(tmp_path / "empty_folder")
+
+        # Create a restricted directory to cause find to exit with an error
+        restricted_dir = tmp_path / "restricted_folder"
+        os.makedirs(restricted_dir)
+        os.chmod(restricted_dir, 0o000)
+
+        try:
+            result = subprocess.run(
+                ["bash", str(tmp_path / ".agent" / "scripts" / "consolidate.sh"), "--report-only"],
+                capture_output=True, text=True, cwd=tmpdir
+            )
+            assert result.returncode == 0 or result.returncode == 1
+            assert "Empty directories (add .gitkeep or remove):" in result.stdout
+            assert "empty_folder" in result.stdout
+            assert "Issues Found: 1" in result.stdout
+        finally:
+            os.chmod(restricted_dir, 0o755)

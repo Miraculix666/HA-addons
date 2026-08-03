@@ -1,10 +1,7 @@
-🔒 [Security Fix] Remove hardcoded personal device entity_id
+🧪 Handle find error in empty directory check
 
-### 🎯 What
-Removed the hardcoded personal device entity ID (`notify.mobile_app_marius_mi_15t_pro`) from the fallback action in the `universal_notification.yaml` blueprint.
+🎯 **What:** The `consolidate.sh` script checks for empty directories using the `find` command. Because the script uses `set -euo pipefail`, if `find` encounters a directory it doesn't have permission to read, it exits with a non-zero status code and the pipeline fails, causing the script to exit early instead of continuing and reporting the empty directories. This testing gap was addressed by appending `|| true` to the end of the empty directory check pipeline and related find pipelines.
 
-### ⚠️ Risk
-If left unfixed, this blueprint would inadvertently send notification data (which may contain sensitive information depending on the caller) to a specific, hardcoded personal device, regardless of who installed or used the blueprint.
+📊 **Coverage:** A new test case `test_empty_directories_error_path` was added to `.agent/tests/test_consolidate.py`. It simulates an unreadable directory using `0o000` permissions. The test verifies that `find` correctly continues and the script still successfully detects empty directories and does not exit with a failure due to the error.
 
-### 🛡️ Solution
-Removed the fallback action block completely. The preceding action already broadcasts to `notify.notify` (which targets all registered companion app devices) dynamically. Removing the hardcoded fallback prevents data leakage while preserving the intended generic notification functionality.
+✨ **Result:** Test coverage for `consolidate.sh` has been improved, and the script's robustness when scanning repositories with varied permission profiles has increased.
