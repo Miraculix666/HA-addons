@@ -46,6 +46,8 @@ with open(".agent/locks/.locked") as f:
 locks = data.get("locks", [])
 if not locks:
     print("✅ No active locks")
+    last_updated = data.get('last_updated', '?')
+    print(f'\n\033[0;34mLast updated: {last_updated}\033[0m')
     sys.exit(0)
 
 now = datetime.datetime.now(datetime.timezone.utc)
@@ -71,9 +73,9 @@ for l in locks:
         colour = "\033[0;34m"
     
     print(f"{colour}{lock_id:<12} {ltype:<6} {fpath:<35} {agent:<20} {expires}\033[0m")
+last_updated = data.get('last_updated', '?')
+print(f'\n\033[0;34mLast updated: {last_updated}\033[0m')
 EOF
-  echo ""
-  echo -e "${BLUE}Last updated: $(python3 -c "import json; d=json.load(open('.agent/locks/.locked')); print(d.get('last_updated','?'))")${NC}"
 }
 
 cmd_lock() {
