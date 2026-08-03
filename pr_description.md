@@ -1,10 +1,7 @@
-🔒 [Security Fix] Remove hardcoded personal device entity_id
+🔒 Fix insecure password exposure in UI configuration
 
-### 🎯 What
-Removed the hardcoded personal device entity ID (`notify.mobile_app_marius_mi_15t_pro`) from the fallback action in the `universal_notification.yaml` blueprint.
+🎯 **What:** The `password` field inside `Obico-HA-addon/config.json` was missing the `"secret": true` configuration property, causing the Home Assistant Add-on frontend UI to render it in plaintext.
 
-### ⚠️ Risk
-If left unfixed, this blueprint would inadvertently send notification data (which may contain sensitive information depending on the caller) to a specific, hardcoded personal device, regardless of who installed or used the blueprint.
+⚠️ **Risk:** Storing or displaying passwords in plaintext within the addon configuration interface could lead to unauthorized exposure (e.g. shoulder surfing, screen grabs).
 
-### 🛡️ Solution
-Removed the fallback action block completely. The preceding action already broadcasts to `notify.notify` (which targets all registered companion app devices) dynamically. Removing the hardcoded fallback prevents data leakage while preserving the intended generic notification functionality.
+🛡️ **Solution:** Appended `"secret": true` to the schema properties for the `password` field. This directs the Home Assistant Supervisor to mask the input field on the addon's configuration tab, preventing unintended plaintext disclosure while preserving user-defined addon titles and formatting.
