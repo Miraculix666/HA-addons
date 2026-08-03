@@ -127,13 +127,19 @@ fi
 header "[4/6] 🌿 Git Branch & Status"
 if command -v git &>/dev/null && git rev-parse --git-dir &>/dev/null; then
   BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
-  info "Current branch: ${BOLD}$BRANCH${NC}"
-  if [[ "$BRANCH" == "release" ]]; then
-    warn "Currently on RELEASE branch — be careful, no direct commits"
-  elif [[ "$BRANCH" == "dev" || "$BRANCH" == "wip" ]]; then
-    pass "On development branch ($BRANCH)"
+  if [[ -z "$BRANCH" ]]; then
+    BRANCH=$(git rev-parse --short HEAD 2>/dev/null || echo "detached")
+    info "Current branch: ${BOLD}$BRANCH (detached HEAD)${NC}"
+    warn "On a detached HEAD — no branch"
   else
-    info "On feature/fix branch: $BRANCH"
+    info "Current branch: ${BOLD}$BRANCH${NC}"
+    if [[ "$BRANCH" == "release" ]]; then
+      warn "Currently on RELEASE branch — be careful, no direct commits"
+    elif [[ "$BRANCH" == "dev" || "$BRANCH" == "wip" ]]; then
+      pass "On development branch ($BRANCH)"
+    else
+      info "On feature/fix branch: $BRANCH"
+    fi
   fi
   # Uncommitted changes
   if git diff --quiet && git diff --staged --quiet; then
