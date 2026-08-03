@@ -23,7 +23,8 @@
       },
       "password": {
         "type": "string",
-        "title": "Obico Passwort"
+        "title": "Obico Passwort",
+        "secret": true
       }
     }
   }
