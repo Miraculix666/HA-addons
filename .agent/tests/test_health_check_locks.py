@@ -105,3 +105,46 @@ def test_health_check_with_stale_soft_locks():
 
         assert "Stale locks found: lock-soft-stale" in result.stdout
         assert "No stale locks detected" not in result.stdout
+
+def test_health_check_valid_json_lock():
+    script_path = Path(__file__).parent.parent / "scripts" / "health-check.sh"
+    colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        create_mock_repo(tmp_path)
+
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "health-check.sh")
+        shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text('{"locks": []}')
+
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "health-check.sh")],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+
+        assert ".locked is valid JSON" in result.stdout
+        assert ".locked is NOT valid JSON" not in result.stdout
+
+def test_health_check_invalid_json_lock():
+    script_path = Path(__file__).parent.parent / "scripts" / "health-check.sh"
+    colors_path = Path(__file__).parent.parent / "scripts" / "colors.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        create_mock_repo(tmp_path)
+
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "health-check.sh")
+        shutil.copy(colors_path, tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text('{invalid_json: true, "')
+
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "health-check.sh")],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+
+        assert ".locked is NOT valid JSON" in result.stdout
