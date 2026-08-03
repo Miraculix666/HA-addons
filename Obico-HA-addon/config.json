@@ -3,13 +3,22 @@
   "version": "1.0.0",
   "slug": "obico",
   "description": "Steuere und überwache deine 3D-Drucker mit Obico.",
-  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+  "arch": [
+    "armhf",
+    "armv7",
+    "aarch64",
+    "amd64",
+    "i386"
+  ],
   "startup": "services",
   "boot": "auto",
   "init": false,
   "stdin": true,
-  "host_network": true,
-  "map": ["config:rw", "ssl:ro"],
+  "host_network": false,
+  "map": [
+    "config:rw",
+    "ssl:ro"
+  ],
   "options": {
     "username": "",
     "password": ""
@@ -26,5 +35,8 @@
         "title": "Obico Passwort"
       }
     }
+  },
+  "ports": {
+    "3334/tcp": 3334
   }
 }
