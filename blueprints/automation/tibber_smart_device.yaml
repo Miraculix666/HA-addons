@@ -49,6 +49,13 @@ blueprint:
 
 mode: restart
 
+variables:
+  target_entity_var: !input target_entity
+  duration_hours_var: !input duration_hours
+  start_time_var: !input start_time
+  end_time_var: !input end_time
+  counter_entity_var: !input counter_entity
+
 trigger:
   # Evaluates every 15 minutes
   - platform: time_pattern
@@ -61,10 +68,21 @@ trigger:
     event_type: "tibber_force_evaluation"
 
 action:
+  - condition: template
+
+    value_template: >-
+
+      {{ target_entity_var is match("^(switch|light|input_boolean)\\.[a-z0-9_]+$") }}
+
+  - condition: template
+
+    value_template: >-
+
+      {{ counter_entity_var == "" or counter_entity_var is match("^counter\\.[a-z0-9_]+$") }}
   - action: pyscript.tibber_evaluate_device
     data:
-      target_entity: !input target_entity
-      hours: !input duration_hours
-      start_time: !input start_time
-      end_time: !input end_time
-      counter_entity: !input counter_entity
+      target_entity: "{{ target_entity_var }}"
+      hours: "{{ duration_hours_var }}"
+      start_time: "{{ start_time_var }}"
+      end_time: "{{ end_time_var }}"
+      counter_entity: "{{ counter_entity_var }}"
