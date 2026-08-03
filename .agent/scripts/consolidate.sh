@@ -33,7 +33,7 @@ if command -v md5sum &>/dev/null || command -v md5 &>/dev/null; then
   command -v md5 &>/dev/null && HASH_CMD="md5 -r"
   
   DUPES=$(find . -not -path './.git/*' -type f -exec $HASH_CMD {} + 2>/dev/null | \
-    sort | awk 'BEGIN{p=""} {if($1==p){print $2} p=$1}' | head -20)
+    sort | awk 'BEGIN{p=""} {if($1==p){print $2} p=$1}' | head -20 || true)
   
   if [[ -z "$DUPES" ]]; then
     echo -e "${GREEN}✅ No duplicate files detected${NC}"
@@ -51,7 +51,7 @@ fi
 echo ""
 echo -e "${BOLD}[2/5] 📏 Large File Detection (>50KB)${NC}"
 echo "$(printf '─%.0s' {1..50})"
-LARGE_FILES=$(find . -not -path './.git/*' -type f -size +50k 2>/dev/null | head -20)
+LARGE_FILES=$(find . -not -path './.git/*' -type f -size +50k 2>/dev/null | head -20 || true)
 if [[ -z "$LARGE_FILES" ]]; then
   echo -e "${GREEN}✅ No unexpectedly large files${NC}"
 else
