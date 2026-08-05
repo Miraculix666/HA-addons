@@ -41,7 +41,12 @@ def start_and_wait_vm(vmid):
 
 def update_vm(vmid):
     print(f"Updating VM {vmid}...")
-    run_cmd(f"qm guest exec {vmid} -- sh -c 'if command -v apt-get >/dev/null; then apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y; elif command -v apk >/dev/null; then apk update -q && apk upgrade; fi'")
+    if str(vmid) == "100":
+        run_cmd(f"qm guest exec {vmid} -- ha os update")
+        run_cmd(f"qm guest exec {vmid} -- ha core update")
+        run_cmd(f"qm guest exec {vmid} -- ha supervisor update")
+    else:
+        run_cmd(f"qm guest exec {vmid} -- sh -c 'if command -v apt-get >/dev/null; then apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get dist-upgrade -y; elif command -v apk >/dev/null; then apk update -q && apk upgrade; fi'")
 
 def stop_vm(vmid):
     print(f"Stopping VM {vmid}...")
