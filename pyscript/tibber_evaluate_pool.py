@@ -7,7 +7,7 @@ def tibber_evaluate_pool(target_entity=None, hours=4, season_sensor=None, solar_
 
     try:
         hours = float(hours)
-    except:
+    except (ValueError, TypeError):
         hours = 4.0
 
     # Dynamic adjustments
@@ -65,7 +65,7 @@ def tibber_evaluate_pool(target_entity=None, hours=4, season_sensor=None, solar_
                     "start_time": bucket_dt.strftime("%Y-%m-%dT%H:%M:"),
                     "price": b["price"]
                 })
-        except:
+        except (ValueError, TypeError, IndexError):
             pass
 
     sorted_blocks = sorted(expanded_blocks, key=lambda x: x["price"])

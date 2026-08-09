@@ -7,7 +7,7 @@ def tibber_evaluate_device(target_entity=None, hours=2, start_time="00:00", end_
 
     try:
         hours = float(hours)
-    except:
+    except (ValueError, TypeError):
         hours = 2.0
 
     log.info(f"Evaluating Tibber schedule for {target_entity} (Duration: {hours}h, Window: {start_time}-{end_time})")
@@ -64,7 +64,7 @@ def tibber_evaluate_device(target_entity=None, hours=2, start_time="00:00", end_
                     "start_time": bucket_dt.strftime("%Y-%m-%dT%H:%M:"),
                     "price": b["price"]
                 })
-        except:
+        except (ValueError, TypeError, IndexError):
             pass
 
     sorted_blocks = sorted(expanded_blocks, key=lambda x: x["price"])
