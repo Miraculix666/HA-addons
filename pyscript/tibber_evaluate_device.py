@@ -1,8 +1,14 @@
 import datetime
+import re
+
+def _is_valid_entity_id(entity_id):
+    return isinstance(entity_id, str) and re.match(r'^[a-z0-9_]+\.[a-z0-9_]+$', entity_id) is not None
+
 
 @service
 def tibber_evaluate_device(target_entity=None, hours=2, start_time="00:00", end_time="23:59"):
-    if not target_entity:
+    if not target_entity or not _is_valid_entity_id(target_entity):
+        log.warning(f"Invalid target_entity: {target_entity}")
         return
 
     try:

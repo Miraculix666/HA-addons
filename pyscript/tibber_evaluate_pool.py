@@ -1,9 +1,25 @@
 import datetime
+import re
+
+def _is_valid_entity_id(entity_id):
+    return isinstance(entity_id, str) and re.match(r'^[a-z0-9_]+\.[a-z0-9_]+$', entity_id) is not None
+
 
 @service
 def tibber_evaluate_pool(target_entity=None, hours=4, season_sensor=None, solar_radiation=None, temperature_sensor=None, negative_prices_always_on=True):
-    if not target_entity:
+    if not target_entity or not _is_valid_entity_id(target_entity):
+        log.warning(f"Invalid target_entity: {target_entity}")
         return
+
+    if season_sensor and not _is_valid_entity_id(season_sensor):
+        log.warning(f"Invalid season_sensor: {season_sensor}")
+        season_sensor = None
+    if solar_radiation and not _is_valid_entity_id(solar_radiation):
+        log.warning(f"Invalid solar_radiation: {solar_radiation}")
+        solar_radiation = None
+    if temperature_sensor and not _is_valid_entity_id(temperature_sensor):
+        log.warning(f"Invalid temperature_sensor: {temperature_sensor}")
+        temperature_sensor = None
 
     try:
         hours = float(hours)
