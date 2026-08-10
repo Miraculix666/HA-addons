@@ -104,7 +104,8 @@ echo -e "${BOLD}[5/5] 🔄 Consolidation Session Counter Update${NC}"
 echo "$(printf '─%.0s' {1..50})"
 CONTEXT_FILE=".agent/memory/CONTEXT.md"
 if [[ -f "$CONTEXT_FILE" ]]; then
-  CURRENT=$(grep -o "Sessions Since Last Consolidation Review.*" "$CONTEXT_FILE" | grep -o '[0-9]*' | head -1 || echo "0")
+  CURRENT=$(sed -n '/Sessions Since Last Consolidation Review/{s/[^0-9]*\([0-9][0-9]*\).*/\1/p;q;}' "$CONTEXT_FILE")
+  CURRENT="${CURRENT:-0}"
   echo -e "${BLUE}ℹ️ Previous count: $CURRENT${NC}"
   if [[ "${1:-}" != "--report-only" ]]; then
     sed -i.bak "s/Sessions Since Last Consolidation Review.*/Sessions Since Last Consolidation Review | 0/" "$CONTEXT_FILE" && rm -f "${CONTEXT_FILE}.bak"
