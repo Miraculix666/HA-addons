@@ -154,7 +154,7 @@ def test_lock_manager_history_injection():
         assert result.returncode == 1
         assert "Invalid history count: must be a positive integer" in result.stderr
 
-def test_lock_manager_check():
+def test_lock_manager_release_unowned_lock():
     script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
 
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -165,29 +165,21 @@ def test_lock_manager_check():
         shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
         lock_file = tmp_path / ".agent" / "locks" / ".locked"
-
-        # Test file with no locks
-        lock_file.write_text(json.dumps({"locks": []}))
-        result = subprocess.run(
-            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "check", "test/path"],
-            capture_output=True, text=True, cwd=tmpdir
-        )
-        assert result.returncode == 0
-        assert "No lock on test/path \u2014 safe to acquire" in result.stdout
-
-        # Test file with a lock
         lock_file.write_text(json.dumps({
             "locks": [{
-                "id": "lock-hard1",
+                "id": "lock-123",
                 "file_or_folder": "test/path",
-                "type": "HARD",
-                "locked_by": "human",
-                "expires_at": "never"
+                "type": "SOFT",
+                "locked_by": "agentA"
             }]
         }))
+
+        registry_file = tmp_path / ".agent" / "locks" / "LOCK_REGISTRY.md"
+        registry_file.write_text('')
+
         result = subprocess.run(
-            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "check", "test/path"],
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-123", "agentB"],
             capture_output=True, text=True, cwd=tmpdir
         )
-        assert result.returncode == 0
-        assert "Locked: lock-hard1 | Type: HARD | By: human | Expires: never" in result.stdout
+        assert result.returncode == 1
+        assert "Lock owned by agentA" in result.stdout
