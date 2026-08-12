@@ -1,0 +1,10 @@
+{
+  "name": "TariffWise",
+  "domain": "tibber_prices",
+  "documentation": "https://github.com/jpawlowski/hass.tibber_prices",
+  "hacs": "0.19.0",
+  "iot_class": "cloud_polling",
+  "zip_release": false,
+  "homeassistant": "2026.1.0"
+}
+

@@ -1,0 +1,55 @@
+blueprint:
+  name: "TariffWise: Universal Smart Scheduler"
+  description: "Universelle, preisgesteuerte Automatisierung für beliebige Geräte (Waschmaschine, Spülmaschine, Boiler etc.) mit TariffWise. Ermittelt die günstigsten Stunden (z.B. 3h bis 16:00 Uhr) und schaltet das Gerät entsprechend. Unterstützt auch durchgehende (zusammenhängende) Blöcke."
+  domain: automation
+  input:
+    target_device:
+      name: Gerät (Schalter/Steckdose)
+      description: "Das Gerät, das basierend auf dem Strompreis gesteuert werden soll."
+      selector:
+        entity:
+          domain: switch
+    target_hours:
+      name: Laufzeit (Stunden)
+      description: "Wie lange soll das Gerät insgesamt laufen? (z.B. 2.5 für 2 Stunden 30 Minuten)"
+      default: 2.0
+      selector:
+        number:
+          min: 0.25
+          max: 24.0
+          step: 0.25
+          unit_of_measurement: h
+          mode: slider
+    start_time:
+      name: Frühester Start
+      description: "Ab wann darf das Gerät frühestens laufen?"
+      default: "00:00:00"
+      selector:
+        time:
+    end_time:
+      name: Spätestes Ende (Deadline)
+      description: "Bis wann muss das Gerät spätestens fertig sein?"
+      default: "23:59:00"
+      selector:
+        time:
+    continuous_block:
+      name: Zusammenhängender Block
+      description: "Soll die Laufzeit am Stück sein (Ein einzelner Block) oder darf sie in den günstigsten 15-Minuten-Takten gestückelt werden?"
+      default: false
+      selector:
+        boolean:
+
+mode: restart
+
+trigger:
+  - platform: time_pattern
+    minutes: "/15"
+
+action:
+  - action: pyscript.tibber_evaluate_device
+    data:
+      target_entity: !input target_device
+      hours: !input target_hours
+      start_time: !input start_time
+      end_time: !input end_time
+      continuous: !input continuous_block
