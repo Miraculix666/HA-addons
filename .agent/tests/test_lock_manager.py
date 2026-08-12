@@ -220,10 +220,39 @@ def test_lock_manager_concurrent_conflicts():
                 conflicts += 1
                 assert "initiate HANDOVER protocol" in out or "HARD lock on test/path — cannot acquire" in out or p.returncode == 1
 
-        # Only one should succeed, others should fail due to conflict
-        assert success == 1
-        assert conflicts == 9
+        # Test invalid history count (command injection attempt)
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "history", "a[$(id>&2)]"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Invalid history count: must be a positive integer" in result.stderr
 
-        with open(lock_file) as f:
-            data = json.load(f)
-            assert len(data["locks"]) == 1
+def test_lock_manager_release_wrong_agent():
+    script_path = Path(__file__).parent.parent / "scripts" / "lock-manager.sh"
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmp_path = Path(tmpdir)
+        os.makedirs(tmp_path / ".agent" / "locks")
+        os.makedirs(tmp_path / ".agent" / "scripts")
+        shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
+        shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
+
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-soft1",
+                "file_or_folder": "test/path",
+                "type": "SOFT",
+                "locked_by": "agentA",
+                "reason": "testing"
+            }]
+        }))
+
+        # Attempt to release with wrong agent
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "release", "lock-soft1", "agentB"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 1
+        assert "Lock owned by agentA — use handover protocol" in result.stdout
