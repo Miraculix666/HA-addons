@@ -80,7 +80,7 @@
 |---|---|---|
 | Lock acquisition | Unit | 🟢 DONE |
 | Lock release | Unit | 🟢 DONE |
-| Stale lock detection | Unit | ⚪ TODO |
+| Stale lock detection | Unit | 🟢 DONE |
 | Concurrent lock conflict | Integration | 🟢 DONE |
 
 ---
@@ -131,3 +131,4 @@ bash scripts/health-check.sh
 
 ## Test Change Log
 - Added HA blueprints for Tibber Pool Pump control. Yamllint validation passed. No dedicated python/shell tests for these files as they are YAML blueprints, but verified the structural validity and logic according to HA standards.
+- Added `test_lock_manager_concurrent_conflicts` to `.agent/tests/test_lock_manager.py` to verify concurrent lock conflict handling.
