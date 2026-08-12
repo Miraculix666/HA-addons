@@ -14,11 +14,8 @@
   "boot": "auto",
   "init": false,
   "stdin": true,
-  "host_network": false,
-  "map": [
-    "config:rw",
-    "ssl:ro"
-  ],
+  "privileged": true,
+  "map": ["config:rw", "ssl:ro"],
   "options": {
     "username": "",
     "password": ""
