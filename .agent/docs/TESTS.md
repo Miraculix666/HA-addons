@@ -68,7 +68,7 @@
 | Lock acquisition | Unit | 🟢 DONE |
 | Lock release | Unit | 🟢 DONE |
 | Stale lock detection | Unit | ⚪ TODO |
-| Concurrent lock conflict | Integration | ⚪ TODO |
+| Concurrent lock conflict | Integration | 🟢 DONE |
 
 ---
 
