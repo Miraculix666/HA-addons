@@ -1,0 +1,1 @@
+run_proxmox_update: !secret run_proxmox_update_cmd

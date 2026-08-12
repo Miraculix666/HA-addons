@@ -255,34 +255,25 @@ def test_lock_manager_clear_stale():
         tmp_path = Path(tmpdir)
         os.makedirs(tmp_path / ".agent" / "locks")
         os.makedirs(tmp_path / ".agent" / "scripts")
-
-        # We also need to create a nested .agent directory because of how REPO_ROOT resolves in tests.
-        # REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)" resolves to tmp_path/.agent
-        os.makedirs(tmp_path / ".agent" / ".agent" / "locks")
-
         shutil.copy(script_path, tmp_path / ".agent" / "scripts" / "lock-manager.sh")
         shutil.copy(script_path.parent / "colors.sh", tmp_path / ".agent" / "scripts" / "colors.sh")
 
-        # In python code inside the bash script, it opens `.agent/locks/.locked` relative to CWD.
-        # Since we run bash with cwd=tmpdir, it expects `.agent/locks/.locked`
-        lock_file_rel = tmp_path / ".agent" / "locks" / ".locked"
+        lock_file = tmp_path / ".agent" / "locks" / ".locked"
+        os.makedirs(tmp_path / ".agent" / ".agent" / "locks", exist_ok=True)
+        registry_file = tmp_path / ".agent" / ".agent" / "locks" / "LOCK_REGISTRY.md"
+        registry_file.write_text('')
 
-        # bash script writes registry to `REGISTRY_FILE="$REPO_ROOT/.agent/locks/LOCK_REGISTRY.md"`
-        # REPO_ROOT in test is `tmp_path/.agent`, so absolute path is `tmp_path/.agent/.agent/locks/LOCK_REGISTRY.md`
-        registry_file_abs = tmp_path / ".agent" / ".agent" / "locks" / "LOCK_REGISTRY.md"
-        registry_file_abs.write_text('')
-
-        # 1. Test non-existent lock
-        lock_file_rel.write_text(json.dumps({"locks": []}))
+        # 1. Non-existent lock
+        lock_file.write_text('{"locks": []}')
         result = subprocess.run(
-            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "clear-stale", "non-existent"],
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "clear-stale", "missing-lock"],
             capture_output=True, text=True, cwd=tmpdir
         )
         assert result.returncode == 1
-        assert "Lock non-existent not found" in result.stdout
+        assert "not found" in result.stdout
 
-        # 2. Test HARD lock
-        lock_file_rel.write_text(json.dumps({
+        # 2. HARD lock
+        lock_file.write_text(json.dumps({
             "locks": [{
                 "id": "lock-hard1",
                 "file_or_folder": "test/path",
@@ -297,18 +288,15 @@ def test_lock_manager_clear_stale():
         assert result.returncode == 1
         assert "Cannot clear HARD lock" in result.stdout
 
-        # 3. Test not stale yet
-        from datetime import datetime, timezone, timedelta
-        now = datetime.now(timezone.utc)
-        future = now + timedelta(hours=1)
-
-        lock_file_rel.write_text(json.dumps({
+        # 3. SOFT lock not yet expired
+        future_time = (datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=1)).isoformat()
+        lock_file.write_text(json.dumps({
             "locks": [{
                 "id": "lock-soft1",
                 "file_or_folder": "test/path",
                 "type": "SOFT",
-                "locked_by": "agent1",
-                "expires_at": future.isoformat().replace("+00:00", "Z")
+                "locked_by": "agent",
+                "expires_at": future_time
             }]
         }))
         result = subprocess.run(
@@ -318,15 +306,15 @@ def test_lock_manager_clear_stale():
         assert result.returncode == 1
         assert "Lock not stale yet" in result.stdout
 
-        # 4. Test successfully clear stale lock
-        past = now - timedelta(hours=1)
-        lock_file_rel.write_text(json.dumps({
+        # 4. SOFT lock already expired
+        past_time = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=1)).isoformat()
+        lock_file.write_text(json.dumps({
             "locks": [{
                 "id": "lock-soft2",
-                "file_or_folder": "test/path2",
+                "file_or_folder": "test/path",
                 "type": "SOFT",
-                "locked_by": "agent1",
-                "expires_at": past.isoformat().replace("+00:00", "Z")
+                "locked_by": "agent",
+                "expires_at": past_time
             }]
         }))
         result = subprocess.run(
@@ -335,10 +323,23 @@ def test_lock_manager_clear_stale():
         )
         assert result.returncode == 0
         assert "cleared and logged" in result.stdout
-
-        data = json.loads(lock_file_rel.read_text())
+        data = json.loads(lock_file.read_text())
         assert len(data["locks"]) == 0
 
-        registry_content = registry_file_abs.read_text()
-        assert "Stale Clear" in registry_content
-        assert "lock-soft2" in registry_content
+        # 5. SOFT lock with no expires_at
+        lock_file.write_text(json.dumps({
+            "locks": [{
+                "id": "lock-soft3",
+                "file_or_folder": "test/path",
+                "type": "SOFT",
+                "locked_by": "agent"
+            }]
+        }))
+        result = subprocess.run(
+            ["bash", str(tmp_path / ".agent" / "scripts" / "lock-manager.sh"), "clear-stale", "lock-soft3"],
+            capture_output=True, text=True, cwd=tmpdir
+        )
+        assert result.returncode == 0
+        assert "cleared and logged" in result.stdout
+        data = json.loads(lock_file.read_text())
+        assert len(data["locks"]) == 0

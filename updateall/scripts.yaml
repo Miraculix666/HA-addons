@@ -1,0 +1,94 @@
+a_01_host_os_update:
+  alias: 'Update: A_01 Host OS'
+  icon: mdi:server
+  sequence:
+  - action: shell_command.run_proxmox_update
+    data:
+      target: proxmox-host
+
+b_01_proxmox_vms_update:
+  alias: 'Update: B_01 Proxmox VMs'
+  icon: mdi:virtual-machine
+  sequence:
+  - action: shell_command.run_proxmox_update
+    data:
+      target: vms
+
+b_02_proxmox_lxcs_update:
+  alias: 'Update: B_02 Proxmox LXCs'
+  icon: mdi:linux
+  sequence:
+  - action: shell_command.run_proxmox_update
+    data:
+      target: lxcs
+
+b_03_docker_containers_update:
+  alias: 'Update: B_03 Docker Containers'
+  icon: mdi:docker
+  sequence:
+  - action: shell_command.run_proxmox_update
+    data:
+      target: docker
+
+c_01_ha_core_update:
+  alias: 'Update: C_01 HA Core & OS & Addons'
+  icon: mdi:home-assistant
+  sequence:
+  - action: shell_command.run_proxmox_update
+    data:
+      target: 100
+  - action: update.install
+    data: {}
+    target:
+      entity_id: update.home_assistant_operating_system_update
+  - action: update.install
+    data: {}
+    target:
+      entity_id: update.home_assistant_core_update
+
+c_02_hacs_update:
+  alias: 'Update: C_02 HACS & Integrations'
+  icon: mdi:store
+  sequence:
+  - action: ha_global_updater.trigger_all
+    data: {}
+
+c_03_zha_quirks_update:
+  alias: 'Update: C_03 ZHA Quirks, OTA & Blueprints'
+  icon: mdi:zigbee
+  sequence:
+  - action: blueprints_updater.update_all
+    data: {}
+  - action: update.install
+    data: {}
+    target:
+      entity_id: '{{ states.update | selectattr("attributes.device_class", "eq", "firmware") | map(attribute="entity_id") | list }}'
+
+d_01_llm_stack_update:
+  alias: 'Update: D_01 LLM Stack'
+  icon: mdi:brain
+  sequence:
+  - action: shell_command.run_proxmox_update
+    data:
+      target: '600'
+
+z_99_master_update:
+  alias: 'Update: Z_99 Master Update All'
+  icon: mdi:update
+  sequence:
+  - action: script.a_01_host_os_update
+    data: {}
+  - action: script.b_01_proxmox_vms_update
+    data: {}
+  - action: script.b_02_proxmox_lxcs_update
+    data: {}
+  - action: script.b_03_docker_containers_update
+    data: {}
+  - action: script.c_02_hacs_update
+    data: {}
+  - action: script.c_03_zha_quirks_update
+    data: {}
+  - action: script.d_01_llm_stack_update
+    data: {}
+  - action: script.c_01_ha_core_update
+    data: {}

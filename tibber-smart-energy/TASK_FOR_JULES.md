@@ -1,21 +1,28 @@
 # TASK FOR JULES (jules.google.com)
-**Topic:** Komplett-Überarbeitung: Tibber Pool-Steuerung & Benachrichtigungen (HA-Addon)
-**Target File:** `pyscript/tibber_pool_pump_new.py`
+**Topic:** Architektur und Entwicklung einer universellen Home Assistant Integration für dynamische Strompreise (Fokus auf Tibber, Awattar, etc.)
 
-Der aktuelle Code für die Tibber-Pool-Steuerung und die entsprechenden Benachrichtigungen funktioniert nicht mehr zuverlässig. Bitte überprüfe und überarbeite das Skript grundlegend anhand der folgenden Dev-Goals:
+## 🎯 Übergeordnete Vision
+Die bisherige "Tibber Pool-Steuerung" war nur ein MVP und eine erste Beispielanwendung. Deine neue Aufgabe ist weitaus größer:
+Baue eine **universell nutzbare, dynamisch preisbasierte, zeit- und preisoptimierte Integration / Erweiterung**! 
 
-## 🎯 Dev-Goals
+Die Poolpumpe dient ab sofort nur noch als erste Test-Anwendung. Das Addon/die Integration soll fähig sein, beliebige Geräte im Haushalt (Waschmaschine, E-Auto, Boiler etc.) effizient nach dynamischen Tarifen zu steuern.
 
-1. **Tibber API & Preis-Logik fixen:** 
-   Prüfe, ob die Tibber-Strompreise (Intervalle) korrekt abgerufen und ausgewertet werden. Die JSON-Pfade oder die Berechnungslogik für die "billigsten Stunden" könnten veraltet sein.
+## 📋 Kern-Requirements
 
-2. **Entity-State Handling (PyScript):** 
-   Die Ansteuerung der Poolpumpe schlägt fehl. Stelle sicher, dass das Skript saubere Service-Calls an Home Assistant sendet (Vermeidung von veralteten `extra keys` Fehlern) und die korrekten Rechte im PyScript-Sandboxing besitzt.
+1. **Universelle Zeiträume (Frei definierbar):**
+   - Der Nutzer muss in der Lage sein, beliebig viele, völlig freie Zeiträume (z.B. "Jeden Tag zwischen 10:00 und 14:00 Uhr" oder "Nachts") zu definieren.
+   - Innerhalb dieser Zeiträume soll die Engine die X günstigsten Stunden/Minuten für die Aktivierung berechnen.
 
-3. **Notification Routing reparieren:** 
-   Die Benachrichtigungs-Payloads laufen ins Leere. Die Logik muss auf den neuesten Home Assistant Notification-Standard (mit sauberen Fallbacks) gehoben werden, um sicherzustellen, dass die Nachrichten auch ankommen.
+2. **Umfassendes Notification-System:**
+   - Jede denkbare Benachrichtigungsvariante muss frei auswählbar sein: Gruppen-Benachrichtigungen, Popups auf Dashboards, Sprachausgabe über Mediengeräte (Smart Speaker, TVs), "All"-Broadcasts usw.
 
-4. **Fehlertoleranz & Logging (History-Bezug):** 
-   In der Vergangenheit sind solche Automatisierungen oft unbemerkt fehlgeschlagen. Implementiere ein robustes `try/except`-Logging. Wenn Tibber z.B. keine Preise liefert, muss sofort ein klarer Fehler im HA-Log (und idealerweise als Fallback-Notification) erscheinen.
+3. **Wunderschöne & intuitive GUI:**
+   - Dies ist von höchster Priorität: Baue ein modernes, selbsterklärendes UI (Config Flow / Frontend), in dem der Nutzer seine Entitäten, Preis-Grenzen, Zeitfenster und Notifications per Mausklick zusammenklicken kann. Kein reines YAML mehr!
 
-Bitte teste die Anpassungen und committe die funktionsfähige Version zurück in dieses Repository.
+4. **Codebase & Referenzen (Integrationen):**
+   - Bediene dich an der Codebase existierender, erfolgreicher HA-Integrationen für dynamische Preise, um Best Practices zu übernehmen (z.B. offizielle Tibber Integration, EVCC, ev_smart_charging, ha-battery-optimizer). Nutze diese Repositories als Grundlage für die Preisberechnungslogik und Architektur.
+
+## 🛠️ Nächste Schritte für dich (Jules)
+- Erstelle ein technisches Konzept für eine vollwertige Custom Component (`custom_components/dynamic_energy_optimizer`).
+- Implementiere den Config Flow (GUI) und die Preis-Berechnungs-Engine.
+- Committe deine Ergebnisse zurück in dieses Repository.
