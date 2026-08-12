@@ -27,3 +27,9 @@ To add any custom component from this repository to Home Assistant:
 1. Open **HACS** > **Integrations** > **Custom Repositories**.
 2. Add `https://github.com/Miraculix666/HA-addons.git` as an Integration.
 3. Search for **TariffWise (Tibber Prices)** and click **Install**.
+
+
+## Configuration Schema
+This repository follows the standardized configuration schema:
+- **`config/dev/`**: General universal configurations (environment-agnostic).
+- **`config/devops/`**: Machine-specific parameters and host deployment configs.

@@ -1,0 +1,142 @@
+automation:
+  - action:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.tibber_pool_schedule
+                state: 'on'
+            sequence:
+              - action: switch.turn_on
+                target:
+                  entity_id: switch.osram_plug_01_switch_6
+          - conditions:
+              - condition: state
+                entity_id: binary_sensor.tibber_pool_schedule
+                state: 'off'
+            sequence:
+              - action: switch.turn_off
+                target:
+                  entity_id: switch.osram_plug_01_switch_6
+    alias: 'Pool: Tibber Automatik'
+    condition: []
+    description: Schaltet die Poolpumpe basierend auf dem Tibber-Analyse-Sensor
+    id: tibber_pool_pump_auto
+    mode: single
+    trigger:
+      - entity_id: binary_sensor.tibber_pool_schedule
+        platform: state
+  - id: tibber_notify_manual_auto
+    alias: 'System: Tibber Test Benachrichtigung'
+    description: Löst eine manuelle Test-Benachrichtigung für Tibber aus
+    mode: single
+    trigger:
+      - platform: state
+        entity_id: input_button.tibber_test
+      - platform: homeassistant
+        event: start
+    condition: []
+    action:
+      - action: pyscript.tibber_daily_notification
+        data: {}
+  - id: tibber_blueprint_trigger
+    alias: 'System: Tibber Universal Benachrichtigung'
+    description: Empfängt die berechneten Tibber-Preise und sendet sie über die Universal-Blueprint
+    mode: single
+    trigger:
+      - platform: event
+        event_type: tibber_prices_calculated
+    action:
+      - action: script.universal_notification_engine
+        data:
+          title: '{{ trigger.event.data.title }}'
+          message: '{{ trigger.event.data.message }}'
+          image: '{{ trigger.event.data.image | default("") }}'
+  - id: tibber_device_switched_notify
+    alias: 'System: Tibber Gerät geschaltet (Benachrichtigung)'
+    description: Informiert, wenn ein Gerät durch den Tibber Smart Scheduler ein- oder
+      ausgeschaltet wurde.
+    mode: queued
+    trigger:
+      - platform: event
+        event_type: tibber_device_switched
+    action:
+      - action: script.universal_notification_engine
+        data:
+          title: Tibber Smart Device
+          message: 'Dein Gerät "{{ trigger.event.data.device }}" wurde {{ trigger.event.data.state
+            }} (Laufzeit-Plan: {{ trigger.event.data.hours }}h).'
+  - id: tibber_smart_dampfgarer
+    alias: 'Tibber Smart: Dampfgarer (2h Vormittags)'
+    use_blueprint:
+      path: miraculix666/tibber_smart_device.yaml
+      input:
+        target_entity: switch.dampfgarer_switch_3
+        duration_hours: 2.0
+        start_time: 06:00:00
+        end_time: '12:00:00'
+  - alias: 'Tibber Smart: Poolpumpe (6h täglich)'
+    id: tibber_smart_poolpumpe
+    use_blueprint:
+      input:
+        duration_hours: 6.0
+        end_time: '23:59:00'
+        start_time: 00:00:00
+        target_entity: switch.osram_plug_01_switch_6
+      path: miraculix666/tibber_smart_device.yaml
+  - alias: 'Tibber Smart: Bewässerung (3h Nachts)'
+    id: tibber_smart_bewaesserung
+    use_blueprint:
+      input:
+        duration_hours: 2
+        end_time: 23:59:99
+        start_time: 00:00:01
+        target_entity: switch.osram_plug_01_switch_6
+      path: miraculix666/tibber_smart_device.yaml
+  - id: tibber_notification_catcher
+    alias: 'Tibber: Benachrichtigung weiterleiten'
+    trigger:
+      - platform: event
+        event_type: tibber_prices_calculated
+    action:
+      - action: notify.notify
+        data:
+          title: '{{ trigger.event.data.title }}'
+          message: '{{ trigger.event.data.message }}'
+  - id: tibber_device_switched_catcher
+    alias: 'Tibber: Gerät geschaltet Info'
+    trigger:
+      - platform: event
+        event_type: tibber_device_switched
+    action:
+      - action: notify.notify
+        data:
+          title: 'Tibber: Gerät {{ trigger.event.data.device }} geschaltet'
+          message: 'Das Gerät wurde {{ trigger.event.data.state }} (Laufzeit: {{ trigger.event.data.hours
+            }}h).'
+  - action:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.osram_plug_01_switch_6
+      - action: script.universal_notification_engine
+        data:
+          message: Die Poolpumpe lief heute noch nicht! Tibber Failsafe hat die Pumpe
+            für 1,5 Stunden gestartet.
+          title: Pool Failsafe Aktiviert
+      - delay:
+          hours: 1
+          minutes: 30
+      - action: switch.turn_off
+        target:
+          entity_id: switch.osram_plug_01_switch_6
+    alias: 'Pool: Tibber Failsafe Notlauf'
+    condition:
+      - condition: state
+        entity_id: input_boolean.pool_ran_today
+        state: 'off'
+    description: Laesst die Pumpe um 18 Uhr fuer 1.5h laufen, falls sie heute noch nicht
+      lief
+    id: pool_failsafe_trigger
+    mode: single
+    trigger:
+      - at: '18:00:00'
+        platform: time
