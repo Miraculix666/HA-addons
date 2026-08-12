@@ -81,7 +81,7 @@
 | cmd_status output format | Unit | 🟢 DONE |
 | Lock acquisition | Unit | 🟢 DONE |
 | Lock release | Unit | 🟢 DONE |
-| Stale lock detection | Unit | ⚪ TODO |
+| Stale lock detection | Unit | 🟢 DONE |
 | Concurrent lock conflict | Integration | ⚪ TODO |
 
 ---
@@ -120,6 +120,7 @@ bash scripts/health-check.sh
 
 ---
 
+| 2026-07-10 | Added unit tests for stale lock detection in lock-manager.sh | `lock-manager.sh` | jules |
 
 ## 🔗 References
 
