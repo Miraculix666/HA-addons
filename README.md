@@ -31,5 +31,5 @@ To add any custom component from this repository to Home Assistant:
 
 ## Configuration Schema
 This repository follows the standardized configuration schema:
-- **`config/dev/`**: General universal configurations (environment-agnostic).
-- **`config/devops/`**: Machine-specific parameters and host deployment configs.
+- **`config/global/`**: Global architectural configurations (environment-agnostic).
+- **`config/hosts/`**: Machine-specific parameters and host deployment configs.
