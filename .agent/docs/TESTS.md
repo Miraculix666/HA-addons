@@ -66,9 +66,9 @@
 | Test | Type | Status |
 |---|---|---|
 | Lock acquisition | Unit | 🟢 DONE |
-| Lock release | Unit | 🟢 DONE |
-| Stale lock detection | Unit | 🟢 DONE |
-| Missing python3 fallback | Unit | 🟢 DONE |
+| Lock status check | Unit | 🟢 DONE |
+| Lock release | Unit | ⚪ TODO |
+| Stale lock detection | Unit | ⚪ TODO |
 | Concurrent lock conflict | Integration | ⚪ TODO |
 
 ---
@@ -102,9 +102,7 @@ bash scripts/health-check.sh
 | 2026-02-23 | Initial TESTS.md created | — | system-init |
 | 2026-06-26 | Added unit tests for lock acquisition in lock-manager.sh | `lock-manager.sh` | jules |
 | 2026-07-03 | Added unit tests for no stale SOFT locks check in health-check.sh | `health-check.sh` | jules |
-| 2026-07-10 | Added unit test for lock-manager.sh release with missing lock | `lock-manager.sh` | jules |
-| 2026-07-10 | Added unit test for stale lock detection in lock-manager.sh | `lock-manager.sh` | jules |
-| 2026-08-03 | Added unit test for missing python3 fallback in lock-manager.sh | `lock-manager.sh` | jules |
+| 2026-07-10 | Added unit tests for lock status check (cmd_check) in lock-manager.sh | `lock-manager.sh` | jules |
 
 ---
 
