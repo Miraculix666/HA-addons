@@ -1,0 +1,27 @@
+name: "PostgreSQL Database Backup"
+description: "Backs up the external PostgreSQL database to the local Home Assistant config directory."
+version: "1.0.0"
+slug: "postgres_backup"
+init: false
+arch:
+  - amd64
+  - aarch64
+startup: "once"
+boot: "manual"
+map:
+  - config:rw
+  - backup:rw
+options:
+  pg_host: "192.168.200.30"
+  pg_port: 5432
+  pg_user: "hass"
+  pg_password: "hass_db_pass_123"
+  pg_database: "homeassistant"
+  backup_dir: "/config/database_backups"
+schema:
+  pg_host: str
+  pg_port: int
+  pg_user: str
+  pg_password: password
+  pg_database: str
+  backup_dir: str

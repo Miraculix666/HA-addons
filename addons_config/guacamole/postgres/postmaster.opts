@@ -1,0 +1,1 @@
+/usr/lib/postgresql/13/bin/postgres "-D" "/config/addons_config/guacamole/postgres/"

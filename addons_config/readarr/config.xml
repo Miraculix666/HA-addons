@@ -1,0 +1,16 @@
+<Config>
+  <UrlBase>/readarr</UrlBase>
+  <LogLevel>info</LogLevel>
+  <UpdateMechanism>Docker</UpdateMechanism>
+  <BindAddress>*</BindAddress>
+  <Port>8787</Port>
+  <SslPort>6868</SslPort>
+  <EnableSsl>False</EnableSsl>
+  <LaunchBrowser>True</LaunchBrowser>
+  <ApiKey>d0bb791a9bb948ec9c966d1e66742345</ApiKey>
+  <AuthenticationMethod>None</AuthenticationMethod>
+  <Branch>nightly</Branch>
+  <SslCertPath></SslCertPath>
+  <SslCertPassword></SslCertPassword>
+  <InstanceName>Readarr</InstanceName>
+</Config>
