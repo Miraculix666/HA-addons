@@ -44,6 +44,67 @@ blueprint:
       selector:
         entity:
           domain: sensor
+    notification_service:
+      name: Benachrichtigungsdienst (Optional)
+      description: Der notify Service, um den Plan für morgen abends zu senden (z.B. notify.mobile_app_my_phone).
+      default: ""
+      selector:
+        text:
+    temp_high:
+      name: Temperatur Hochsommer
+      description: Temperatur ab der Hochsommer Modus aktiv wird.
+      default: 25.0
+      selector:
+        number:
+          min: 15.0
+          max: 40.0
+          step: 1.0
+          unit_of_measurement: °C
+          mode: slider
+    temp_very_high:
+      name: Temperatur Sehr Hoch
+      description: Temperatur für zusätzliche Laufzeit.
+      default: 30.0
+      selector:
+        number:
+          min: 20.0
+          max: 45.0
+          step: 1.0
+          unit_of_measurement: °C
+          mode: slider
+    temp_low:
+      name: Temperatur Niedrig
+      description: Temperatur für reduzierte Laufzeit.
+      default: 15.0
+      selector:
+        number:
+          min: 5.0
+          max: 25.0
+          step: 1.0
+          unit_of_measurement: °C
+          mode: slider
+    temp_very_low:
+      name: Temperatur Sehr Niedrig
+      description: Temperatur für stark reduzierte Laufzeit.
+      default: 10.0
+      selector:
+        number:
+          min: -5.0
+          max: 20.0
+          step: 1.0
+          unit_of_measurement: °C
+          mode: slider
+    solar_threshold:
+      name: Solar Schwellenwert
+      description: Sonnenstrahlung für zusätzliche Laufzeit.
+      default: 500.0
+      selector:
+        number:
+          min: 100.0
+          max: 1500.0
+          step: 50.0
+          unit_of_measurement: W/m²
+          mode: slider
     negative_prices_always_on:
       name: Bei negativen Preisen immer an
       description: Schaltet die Pumpe unabhängig vom Intervall ein, wenn der Strompreis negativ ist.
@@ -119,4 +180,9 @@ action:
       solar_radiation: "{{ solar_radiation_var }}"
       temperature_sensor: "{{ temperature_sensor_var }}"
       negative_prices_always_on: "{{ negative_prices_always_on_var }}"
-      counter_entity: "{{ counter_entity_var }}"
+      temp_high: !input temp_high
+      temp_very_high: !input temp_very_high
+      temp_low: !input temp_low
+      temp_very_low: !input temp_very_low
+      solar_threshold: !input solar_threshold
+      notification_service: !input notification_service
