@@ -3,7 +3,7 @@ blueprint:
   name: Pool Notlauf (Emergency Fallback)
   description: >
     Notlauf Automatisierung für den Pool.
-    Die Pumpe läuft 3 Stunden ab 13:00 Uhr und 1 Stunde ab 23:00 Uhr,
+    Die Pumpe läuft zu den definierten Zeiten morgens, mittags und abends/nachts,
     falls die smarte Steuerung fehlschlägt oder überschrieben werden soll.
   domain: automation
   input:
@@ -13,6 +13,23 @@ blueprint:
       selector:
         entity:
           domain: switch
+    morning_start_time:
+      name: Startzeit Morgen
+      description: Startzeit für den Lauf am Morgen (z.B. 08:00:00).
+      default: "08:00:00"
+      selector:
+        time:
+    morning_duration_hours:
+      name: Dauer Morgen (Stunden)
+      description: Wie lange die Pumpe am Morgen laufen soll.
+      default: 1.0
+      selector:
+        number:
+          min: 0.5
+          max: 12.0
+          step: 0.5
+          unit_of_measurement: h
+          mode: slider
     day_start_time:
       name: Startzeit Tag
       description: Startzeit für den Lauf am Tag (z.B. 13:00:00).
@@ -47,7 +64,6 @@ blueprint:
           step: 0.5
           unit_of_measurement: h
           mode: slider
-
     counter_entity:
       name: Zähler (Optional)
       description: Zähler, der bei jedem Lauf inkrementiert wird.
@@ -58,7 +74,13 @@ blueprint:
 
 mode: restart
 
+variables:
+  counter_ent: !input counter_entity
+
 trigger:
+  - platform: time
+    at: !input morning_start_time
+    id: "morning_start"
   - platform: time
     at: !input day_start_time
     id: "day_start"
@@ -66,11 +88,28 @@ trigger:
     at: !input night_start_time
     id: "night_start"
 
-variables:
-  counter_ent: !input counter_entity
-
 action:
   - choose:
+      - conditions:
+          - condition: trigger
+            id: "morning_start"
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: !input target_entity
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ counter_ent != '' }}"
+                sequence:
+                  - action: counter.increment
+                    target:
+                      entity_id: "{{ counter_ent }}"
+          - delay:
+              hours: !input morning_duration_hours
+          - action: switch.turn_off
+            target:
+              entity_id: !input target_entity
       - conditions:
           - condition: trigger
             id: "day_start"
