@@ -1,0 +1,29 @@
+{
+    "bridge": {
+        "name": "Homebridge B3EA",
+        "username": "0E:E2:A7:1A:B3:EA",
+        "port": 51608,
+        "pin": "697-93-901",
+        "advertiser": "bonjour-hap"
+    },
+    "accessories": [],
+    "platforms": [
+        {
+            "name": "Config",
+            "port": 8581,
+            "platform": "config"
+        },
+        {
+            "protocol": "tcp",
+            "host": "localhost",
+            "port": 1883,
+            "homeassistantBaseTopic": "homeassistant",
+            "platform": "HombridgePluginHomeassistant",
+            "_bridge": {
+                "username": "0E:1C:3C:E3:37:C8",
+                "port": 46981,
+                "name": "Tuxbox's homebridge homeassistant"
+            }
+        }
+    ]
+}
