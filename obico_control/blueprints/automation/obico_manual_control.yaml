@@ -1,0 +1,125 @@
+blueprint:
+  name: "Obico KI: Manuelle Steuerung, Pause/Resume & Renice (Prozess-PrioritÃ¤t)"
+  description: "Erlaubt das manuelle Starten, Pausieren/Fortsetzen (Resume), Stoppen und Anpassen der Prozess-PrioritÃ¤t (Renice) des Obico ML KI-Addons auf Knopfdruck oder Event."
+  domain: automation
+  input:
+    trigger_action_input:
+      name: "AuslÃ¶ser / Action Selector"
+      description: "Entity (z.B. Input Select oder Button), die den Befehl (start, pause_resume, stop, renice) vorgibt"
+      selector:
+        entity:
+          domain: [input_select, input_button, button, select]
+    obico_addon_id:
+      name: "Obico ML Addon Slug"
+      description: "Slug des Obico ML Addons (z.B. ae8752e5_obico_ml)"
+      default: "ae8752e5_obico_ml"
+      selector:
+        text:
+    target_nice_level:
+      name: "Prozess-PrioritÃ¤t (Nice Level)"
+      description: "Nice Level fÃ¼r die Obico-ProzessausfÃ¼hrung (z.B. -10 fÃ¼r Hohe PrioritÃ¤t, 0 Normal, 19 Niedrig/Hintergrund)"
+      default: "0"
+      selector:
+        select:
+          options:
+            - label: "Hohe PrioritÃ¤t (Nice -10)"
+              value: "-10"
+            - label: "Normale PrioritÃ¤t (Nice 0)"
+              value: "0"
+            - label: "Niedrige PrioritÃ¤t (Nice 10)"
+              value: "10"
+            - label: "Hintergrund (Nice 19 - Maximale LLM-KapazitÃ¤t)"
+              value: "19"
+    enable_notification:
+      name: "Status-Benachrichtigung senden"
+      description: "Erstellt eine Benachrichtigung bei ZustandsÃ¤nderung"
+      default: true
+      selector:
+        boolean:
+
+mode: restart
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input trigger_action_input
+
+action:
+  - choose:
+      # Option 1: Start
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['start', 'Starten', 'on', 'ON', 'Running'] }}"
+        sequence:
+          - action: hassio.addon_start
+            data:
+              addon: !input obico_addon_id
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger_variables.enable_notification | default(true) }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      notification_id: obico_manual_control
+                      title: "ð§  Obico KI Gestartet"
+                      message: "Das Obico ML KI-Addon wurde manuell gestartet."
+
+      # Option 2: Pause / Resume
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['pause_resume', 'Pausieren', 'Fortsetzen', 'toggle'] }}"
+        sequence:
+          - action: hassio.addon_stdin
+            data:
+              addon: !input obico_addon_id
+              input: "toggle_pause"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger_variables.enable_notification | default(true) }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      notification_id: obico_manual_control
+                      title: "â¯ï¸ Obico KI Status GeÃ¤ndert"
+                      message: "Obico KI-Erkennung wurde pausiert/fortgesetzt."
+
+      # Option 3: Stop
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['stop', 'Stoppen', 'off', 'OFF', 'Stopped'] }}"
+        sequence:
+          - action: hassio.addon_stop
+            data:
+              addon: !input obico_addon_id
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger_variables.enable_notification | default(true) }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      notification_id: obico_manual_control
+                      title: "ð Obico KI Gestoppt"
+                      message: "Das Obico ML KI-Addon wurde gestoppt. Ressourcen freigegeben."
+
+      # Option 4: Renice / Priority Change
+      - conditions:
+          - condition: template
+            value_template: "{{ trigger.to_state.state in ['renice', 'PrioritÃ¤t Ãndern'] or 'Nice' in trigger.to_state.state }}"
+        sequence:
+          - action: hassio.addon_stdin
+            data:
+              addon: !input obico_addon_id
+              input: "renice {{ trigger.to_state.state }}"
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ trigger_variables.enable_notification | default(true) }}"
+                sequence:
+                  - action: persistent_notification.create
+                    data:
+                      notification_id: obico_manual_control
+                      title: "â¡ Obico Prozess-PrioritÃ¤t GeÃ¤ndert"
+                      message: "Prozess-PrioritÃ¤t (Nice Level) angepasst auf: {{ trigger.to_state.state }}"

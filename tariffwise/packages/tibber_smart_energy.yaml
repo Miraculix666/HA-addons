@@ -1,0 +1,409 @@
+# ==============================================================================
+# PACKAGE: Tibber Smart Energy & Pool Management
+# DESCRIPTION: Automates pool pump and notifications based on Tibber prices.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# INPUTS & HELPERS
+# ------------------------------------------------------------------------------
+input_boolean:
+  pool_pump_auto_mode:
+    name: "Poolpumpe Automatik"
+    icon: mdi:robot
+    initial: on
+
+  pool_pump_adhoc_active:
+    name: "Ad-hoc Planung aktivieren"
+    icon: mdi:play-circle-outline
+
+  pool_pump_solar_boost_enabled:
+    name: "Poolpumpe: Solar-Boost durch Sonneneinstrahlung aktivieren"
+    icon: mdi:solar-power
+    initial: on
+
+input_datetime:
+  pool_pump_last_run:
+    name: "Letzter Lauf der Poolpumpe"
+    has_date: true
+    has_time: true
+
+  pool_pump_adhoc_deadline:
+    name: "Ad-hoc Deadline"
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-clock
+
+input_number:
+  pool_pump_always_on_max_price:
+    name: "Poolpumpe: Preisschwelle Brutto (ct/kWh inkl. MwSt & Abgaben)"
+    min: 0.0
+    max: 50.0
+    step: 0.5
+    initial: 10.0
+    unit_of_measurement: "ct/kWh"
+    icon: mdi:currency-eur
+
+  pool_pump_high_temp_threshold:
+    name: "Poolpumpe: Schwellenwert Temperatur X (Â°C)"
+    min: 15.0
+    max: 40.0
+    step: 0.5
+    initial: 25.0
+    unit_of_measurement: "Â°C"
+    icon: mdi:thermometer-high
+
+  pool_pump_high_temp_min_runtime:
+    name: "Poolpumpe: Mindestlaufzeit bei Hitze Y (Stunden)"
+    min: 1.0
+    max: 16.0
+    step: 0.5
+    initial: 8.0
+    unit_of_measurement: "h"
+    icon: mdi:timer-outline
+
+  pool_pump_base_min_runtime:
+    name: "Poolpumpe: Standard-Mindestlaufzeit (Stunden)"
+    min: 1.0
+    max: 12.0
+    step: 0.5
+    initial: 4.0
+    unit_of_measurement: "h"
+    icon: mdi:timer-sand
+
+  pool_pump_solar_radiation_threshold:
+    name: "Poolpumpe: Schwellenwert Sonneneinstrahlung (W/mÂ²)"
+    min: 100.0
+    max: 1000.0
+    step: 50.0
+    initial: 400.0
+    unit_of_measurement: "W/mÂ²"
+    icon: mdi:white-balance-sunny
+
+  pool_pump_adhoc_duration:
+    name: "Ad-hoc Dauer (Stunden)"
+    min: 1
+    max: 12
+    step: 1
+    icon: mdi:timer-sand
+
+# ------------------------------------------------------------------------------
+# TEMPLATE SENSORS
+# ------------------------------------------------------------------------------
+
+template:
+  - switch:
+      - name: "Poolpumpe"
+        unique_id: poolpumpe_template_switch
+        icon: mdi:pool
+        state: "{{ states('switch.osram_plug_01_switch_6') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: switch.osram_plug_01_switch_6
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: switch.osram_plug_01_switch_6
+
+  - sensor:
+
+      - name: "Poolpumpe Schedule Heute"
+        unique_id: pool_pump_schedule_today_template
+        icon: mdi:pool
+        state: >
+          {{ states('sensor.pool_pump_schedule_today') | default('Warte auf Auswertung', true) }}
+
+      - name: "Poolpumpe Laufzeit Heute"
+        unique_id: pool_pump_runtime_today_template
+        unit_of_measurement: "min"
+        icon: mdi:clock
+        state: >
+          {{ states('sensor.pool_pump_runtime_today') | float(0.0) }}
+
+# ------------------------------------------------------------------------------
+# AUTOMATIONS
+# ------------------------------------------------------------------------------
+automation:
+
+  # --- [1/3] Poolpumpe: Preis-basierte Steuerung -----------------------------
+  - id: pool_pump_tibber_optimized
+    alias: "Pool: Tibber-Optimierte Steuerung"
+    description: "Evaluierung der Poolpumpe basierend auf Strompreis, Wassertemperatur, TageshÃ¶chsttemperatur und Sonneneinstrahlung."
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: sun
+        event: sunset
+      - platform: time_pattern
+        minutes: "/15"
+      - platform: state
+        entity_id: input_number.pool_pump_always_on_max_price
+      - platform: state
+        entity_id: input_number.pool_pump_high_temp_threshold
+      - platform: state
+        entity_id: input_number.pool_pump_high_temp_min_runtime
+      - platform: state
+        entity_id: input_number.pool_pump_solar_radiation_threshold
+    condition:
+      - condition: state
+        entity_id: input_boolean.pool_pump_auto_mode
+        state: "on"
+    action:
+      - action: pyscript.tibber_evaluate_device
+        data:
+          target_entity: switch.osram_plug_01_switch_6
+          hours: 4
+    mode: single
+
+  - id: pool_pump_adhoc_auto_off
+    alias: "Pool: Ad-hoc beenden"
+    description: "Deaktiviert die Ad-hoc Planung nach Ablauf der Deadline"
+    trigger:
+      - platform: time
+        at: input_datetime.pool_pump_adhoc_deadline
+    action:
+      - action: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.pool_pump_adhoc_active
+    mode: single
+
+  # --- [2/3] Tibber: Morgen-Preisansage --------------------------------------
+  - id: tibber_morning_price_announcement
+    alias: "Tibber: Morgen-Preisansage"
+    trigger:
+      - platform: time
+        at: "07:30:00"
+    action:
+      - variables:
+          tibber_price: "{{ states('sensor.electricity_price_im_beisen_12b') }}"
+          current_price: >
+            {% if states('sensor.electricity_price_im_beisen_12b') not in ['unknown', 'unavailable', 'None', ''] %}
+              {{ tibber_price | float(0) | round(2) }}
+            {% else %}
+              {% set data = state_attr('sensor.awattar_current_price', 'data') %}
+              {% if data %}
+                {% set current_ts = as_timestamp(now()) * 1000 %}
+                {% set match = data | selectattr('start_timestamp', '<=', current_ts) | selectattr('end_timestamp', '>', current_ts) | first | default(None) %}
+                {% if match %}
+                  {{ (match.marketprice / 1000) | round(2) }}
+                {% else %}
+                  99
+                {% endif %}
+              {% else %}
+                99
+              {% endif %}
+            {% endif %}
+      - action: tts.google_say
+        target:
+          entity_id: all
+        data:
+          message: >
+            Guten Morgen. Der Strompreis heute betrÃ¤gt 
+            {{ current_price }} Euro.
+
+  # --- [3/3] Tibber: Warnung vor PreissprÃ¼ngen -------------------------------
+  - id: tibber_price_jump_warning
+    alias: "Tibber: Warnung vor Preissprung"
+    trigger:
+      - platform: time_pattern
+        minutes: "50"
+      - platform: state
+        entity_id: sensor.electricity_price_im_beisen_12b
+    condition:
+      - condition: template
+        value_template: >
+          {% set current = states('sensor.electricity_price_im_beisen_12b') %}
+          {% if current not in ['unknown', 'unavailable', 'None', ''] %}
+            {% set current_val = current | float(0) %}
+            {% set prices = state_attr('sensor.electricity_price_im_beisen_12b', 'today') %}
+            {% set next_h = now().hour + 1 %}
+            {% if next_h < 24 %}
+              {% if prices and prices | length > next_h and prices[next_h].total is defined %}
+                {% set next_val = prices[next_h].total | float %}
+              {% else %}
+                {% set next_val = current_val %}
+              {% endif %}
+            {% else %}
+              {% set tomorrow = state_attr('sensor.electricity_price_im_beisen_12b', 'tomorrow') %}
+              {% if tomorrow and tomorrow | length > 0 and tomorrow[0].total is defined %}
+                {% set next_val = tomorrow[0].total | float %}
+              {% else %}
+                {% set next_val = current_val %}
+              {% endif %}
+            {% endif %}
+            {{ (next_val - current_val) > 0.03 }}
+          {% else %}
+            false
+          {% endif %}
+    action:
+      - variables:
+          current_val: "{{ states('sensor.electricity_price_im_beisen_12b') | float(0) }}"
+          prices: "{{ state_attr('sensor.electricity_price_im_beisen_12b', 'today') }}"
+          next_h: "{{ now().hour + 1 }}"
+          next_val: >
+            {% if next_h < 24 %}
+              {% if prices and prices | length > next_h and prices[next_h].total is defined %}
+                {{ prices[next_h].total | float }}
+              {% else %}
+                {{ current_val }}
+              {% endif %}
+            {% else %}
+              {% set tomorrow = state_attr('sensor.electricity_price_im_beisen_12b', 'tomorrow') %}
+              {% if tomorrow and tomorrow | length > 0 and tomorrow[0].total is defined %}
+                {{ tomorrow[0].total | float }}
+              {% else %}
+                {{ current_val }}
+              {% endif %}
+            {% endif %}
+      - action: notify.notify
+        data:
+          title: "ð Achtung: Strompreissprung!"
+          message: >
+            Der Strompreis steigt in der nÃ¤chsten Stunde stark an von 
+            {{ current_val }} auf 
+            {{ next_val }} Euro.
+          data:
+            clickAction: "/energy"
+            url: "/energy"
+      - action: persistent_notification.create
+        data:
+          title: "ð Achtung: Strompreissprung!"
+          message: >
+            Der Strompreis steigt in der nÃ¤chsten Stunde stark an von 
+            {{ current_val }} auf 
+            {{ next_val }} Euro.
+
+  # --- [4/4] Tibber: TÃ¤gliche 14:00 Uhr Preismitteilung ---------------------
+  - id: tibber_daily_1400_price_notification
+    alias: "Tibber: TÃ¤gliche 14:00 Uhr PreisÃ¼bersicht"
+    description: "Benachrichtigt tÃ¤glich um 14:00 Uhr Ã¼ber die neuen Strompreise fÃ¼r morgen."
+    trigger:
+      - platform: time
+        at: "14:00:00"
+      - platform: homeassistant
+        event: start
+    action:
+      - action: notify.notify
+        data:
+          title: "â¡ Tibber Strompreise Aktualisiert"
+          message: >
+            Die neuen Strompreise fÃ¼r morgen wurden verÃ¶ffentlicht. Aktueller Preis: {{ states('sensor.electricity_price_im_beisen_12b') }} â¬/kWh.
+      - action: persistent_notification.create
+        data:
+          notification_id: tibber_daily_price_info
+          title: "â¡ Tibber Strompreise Aktualisiert"
+          message: >
+            Die neuen Strompreise fÃ¼r morgen wurden verÃ¶ffentlicht. Aktueller Preis: {{ states('sensor.electricity_price_im_beisen_12b') }} â¬/kWh.
+
+# ------------------------------------------------------------------------------
+# WEBSCRAPER FALLBACK (REST SENSOR FOR aWATTar)
+# ------------------------------------------------------------------------------
+rest:
+  - resource: "https://api.awattar.de/v1/marketdata"
+    scan_interval: 3600
+    sensor:
+      - name: awattar_current_price
+        value_template: >
+          {% set current_ts = as_timestamp(now()) * 1000 %}
+          {% set match = value_json.data | selectattr('start_timestamp', '<=', current_ts) | selectattr('end_timestamp', '>', current_ts) | first | default(None) %}
+          {% if match %}
+            {{ (match.marketprice / 10) | round(2) }}
+          {% else %}
+            unknown
+          {% endif %}
+        unit_of_measurement: "Cent/kWh"
+        json_attributes_path: "$"
+        json_attributes:
+          - data
+
+
+template:
+  - switch:
+      - name: "Poolpumpe"
+        unique_id: poolpumpe_template_switch
+        icon: mdi:pool
+        state: "{{ states('switch.osram_plug_01_switch_6') }}"
+        turn_on:
+          action: switch.turn_on
+          target:
+            entity_id: switch.osram_plug_01_switch_6
+        turn_off:
+          action: switch.turn_off
+          target:
+            entity_id: switch.osram_plug_01_switch_6
+
+  - sensor:
+
+      - name: "Poolpumpe NÃ¤chster Lauf (Prognose)"
+        icon: mdi:clock-fast
+        state: >
+          {% set current_month = now().month %}
+          {% set required_hours = 3 if (current_month >= 3 and current_month <= 9) else 1 %}
+          {% set h = now().hour %}
+          {% set prices = state_attr('sensor.electricity_price_im_beisen_12b', 'today') %}
+          {% set ns = namespace(p=[]) %}
+          {% if states('sensor.electricity_price_im_beisen_12b') not in ['unknown', 'unavailable', 'None', ''] and prices and prices | length > 0 %}
+            {% for p in prices %}
+              {% set ns.p = ns.p + [{'time': (p.starts_at | as_datetime | as_local).strftime('%H:%M'), 'total': p.total}] %}
+            {% endfor %}
+          {% else %}
+            {% set data = state_attr('sensor.awattar_current_price', 'data') %}
+            {% if data %}
+              {% for p in data %}
+                {% set ts = (p.start_timestamp / 1000) | timestamp_custom('%H:%M') %}
+                {% set ns.p = ns.p + [{'time': ts, 'total': p.marketprice}] %}
+              {% endfor %}
+            {% endif %}
+          {% endif %}
+          
+          {% if ns.p | length > 0 %}
+            {% if required_hours == 3 %}
+              {% if h < 8 %}
+                {% set block = ns.p[:8] | sort(attribute='total') %}
+                {{ block[0].time }} Uhr
+              {% elif h < 16 %}
+                {% set block = ns.p[8:16] | sort(attribute='total') %}
+                {{ block[0].time }} Uhr
+              {% else %}
+                {% set block = ns.p[16:] | sort(attribute='total') %}
+                {{ block[0].time }} Uhr
+              {% endif %}
+            {% else %}
+              {% set sorted = ns.p | sort(attribute='total') %}
+              {{ sorted[0].time }} Uhr
+            {% endif %}
+          {% else %}
+            Unbekannt (Keine Daten)
+          {% endif %}
+automation:
+  - id: pool_pump_notfall_13_00
+    alias: "Pool: Notfall-Lauf 13:00 Uhr"
+    description: "LÃ¤uft um 13:00 Uhr fÃ¼r 2 Stunden an, falls die Pumpe heute noch gar nicht lief."
+    trigger:
+      - platform: time
+        at: "13:00:00"
+    condition:
+      - condition: template
+        value_template: >
+          {% set last_run = states('input_datetime.pool_pump_last_run') %}
+          {% if last_run not in ['unknown', 'unavailable', 'None', ''] %}
+            {{ (last_run | as_datetime | as_local).date() < now().date() }}
+          {% else %}
+            true
+          {% endif %}
+      - condition: state
+        entity_id: input_boolean.pool_pump_auto_mode
+        state: "on"
+    action:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.osram_plug_01_switch_6
+      - action: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.pool_pump_last_run
+        data:
+          timestamp: "{{ now().timestamp() }}"
+      - delay: "02:00:00"
+      - action: switch.turn_off
+        target:
+          entity_id: switch.osram_plug_01_switch_6

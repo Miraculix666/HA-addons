@@ -1,0 +1,92 @@
+# ==============================================================================
+# HACS PACKAGE: Mercury 3D Printer & Obico AI Integration
+# ==============================================================================
+
+input_boolean:
+  mercury_printer_power:
+    name: "Mercury 3D Drucker: Stromversorgung"
+    icon: mdi:printer-3d
+    initial: off
+
+  obico_auto_start_enabled:
+    name: "Obico KI Auto-Start bei Drucker-Betrieb"
+    icon: mdi:brain
+    initial: on
+
+input_text:
+  mercury_printer_host:
+    name: "Mercury 3D Drucker IP / Hostname"
+    icon: mdi:ip-network
+    initial: "192.168.50.150"
+
+
+template:
+  - sensor:
+      - name: "Obico TPU/GPU Status"
+        unique_id: obico_tpu_gpu_status
+        icon: mdi:microchip
+        state: >
+          {% if is_state('binary_sensor.mercury_printer_online', 'on') or is_state('input_boolean.mercury_printer_power', 'on') %}
+            Obico KI Aktiv (TPU / GPU zugewiesen)
+          {% else %}
+            Bereit fÃ¼r Local LLM Stack (Freigegeben)
+          {% endif %}
+
+automation:
+  # ------------------------------------------------------------------ 01 Drucker EIN oder Web/App-Anfrage -> Obico Starten
+  - id: mercury_printer_turned_on_start_obico
+    alias: "Mercury 3D Drucker / App / Web: Obico KI starten"
+    description: "Startet das Obico ML Addon automatisch bei Drucker-Betrieb oder Web/App-Anfrage"
+    trigger:
+      - platform: homeassistant
+        event: start
+      - platform: state
+        entity_id: binary_sensor.mercury_printer_online
+        to: "on"
+      - platform: state
+        entity_id: input_boolean.mercury_printer_power
+        to: "on"
+      - platform: webhook
+        webhook_id: obico_app_web_access
+        allowed_methods:
+          - POST
+          - GET
+        local_only: false
+    condition:
+      - condition: state
+        entity_id: input_boolean.obico_auto_start_enabled
+        state: "on"
+    action:
+      - action: hassio.addon_start
+        data:
+          addon: "ae8752e5_obico_ml"
+      - action: persistent_notification.create
+        data:
+          notification_id: mercury_obico_status
+          title: "ð¨ï¸ Obico KI Gestartet"
+          message: "Obico KI-Fehlererkennung wurde durch Drucker-Betrieb oder Web/App-Anfrage gestartet."
+
+  # ------------------------------------------------------------------ 02 Drucker AUS -> Obico nach 30 Min pausieren/stoppen
+  - id: mercury_printer_turned_off_stop_obico
+    alias: "Mercury 3D Drucker: Nach 30 Min InaktivitÃ¤t -> Obico KI stoppen & LLM Ressourcen freigeben"
+    description: "Stoppt das Obico ML Addon erst nach 30 Minuten InaktivitÃ¤t"
+    trigger:
+      - platform: state
+        entity_id: binary_sensor.mercury_printer_online
+        to: "off"
+        for:
+          minutes: 30
+      - platform: state
+        entity_id: input_boolean.mercury_printer_power
+        to: "off"
+        for:
+          minutes: 30
+    action:
+      - action: hassio.addon_stop
+        data:
+          addon: "ae8752e5_obico_ml"
+      - action: persistent_notification.create
+        data:
+          notification_id: mercury_obico_status
+          title: "ð¨ï¸ Obico KI InaktivitÃ¤ts-Stopp"
+          message: "30 Minuten InaktivitÃ¤t abgelaufen. Obico ML wurde pausiert/gestoppt â TPU & GPU stehen wieder 100% fÃ¼r den Local LLM Stack bereit."

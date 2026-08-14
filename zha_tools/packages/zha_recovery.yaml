@@ -1,0 +1,25 @@
+input_button:
+  zha_reload_button:
+    name: "ZHA Netzwerk Neu-Initialisieren (Recovery)"
+    icon: mdi:zigbee
+
+automation:
+  - id: zha_manual_recovery_reload
+    alias: "System: ZHA Coordinator manuell neu initialisieren"
+    description: "LÃ¤dt die ZHA-Integration hart neu, um Unknown Command Fehler oder AufhÃ¤nger zu beheben."
+    trigger:
+      - platform: state
+        entity_id: input_button.zha_reload_button
+    action:
+      - action: homeassistant.reload_config_entry
+        data:
+          entry_id: "f10d44b360b899140edcbcf48bd11d51"
+      - action: persistent_notification.create
+        data:
+          notification_id: zha_reloaded
+          title: "ð ZHA Neu-Initialisierung"
+          message: "Das Zigbee-Netzwerk (ZHA) wurde erfolgreich neu gestartet und der Coordinator reinitialisiert!"
+      - action: system_log.write
+        data:
+          level: warning
+          message: "ZHA Integration wurde manuell via Recovery-Button neu geladen!"

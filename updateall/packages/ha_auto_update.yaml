@@ -1,0 +1,305 @@
+# +------------------------------------------------------------------------------+
+# |          Home Assistant Automatisches Update-Paket (HACS System Paket)      |
+# |  01_Detect -> 02_Preview -> 03_Backup -> 04_Perform -> 05_Verify -> 06_Notify|
+# +------------------------------------------------------------------------------+
+
+input_datetime:
+  ha_update_release_detected:
+    name: "HA Update Release erkannt am"
+    has_date: true
+    has_time: true
+    icon: mdi:calendar-clock
+
+input_text:
+  ha_update_version_detected:
+    name: "HA Update Erkannte Version"
+    max: 250
+    icon: mdi:tag
+  ha_update_verification_results:
+    name: "HA Update Verifizierungsergebnis"
+    max: 250
+    icon: mdi:check-decagram
+
+input_boolean:
+  ha_update_in_progress:
+    name: "HA Update Wird durchgefÃ¼hrt"
+    icon: mdi:update
+  ha_update_notification_sent:
+    name: "HA Update VorankÃ¼ndigung gesendet"
+    icon: mdi:bell-check
+
+template:
+  - trigger:
+      - platform: event
+        event_type: set_ha_update_ai_summary
+    sensor:
+      - name: "HA Update KI-Zusammenfassung"
+        unique_id: ha_update_ai_summary
+        icon: mdi:robot
+        state: "Zusammenfassung"
+        attributes:
+          summary: "{{ trigger.event.data.summary }}"
+
+  - sensor:
+      - name: "HA Update Geplanter Zeitpunkt"
+        unique_id: ha_update_scheduled_time
+        icon: mdi:calendar-arrow-right
+        state: >
+          {% set detected = states('input_datetime.ha_update_release_detected') %}
+          {% if detected not in ['unknown', 'unavailable', '1970-01-01 00:00:00', ''] %}
+            {% set dt = as_datetime(detected) %}
+            {{ (dt + timedelta(days=7)) | as_timestamp | timestamp_custom('%d.%m.%Y %H:%M') }}
+          {% else %}
+            Kein Update ausstehend
+          {% endif %}
+
+      - name: "HA Update Tage bis Update"
+        unique_id: ha_update_days_remaining
+        unit_of_measurement: "Tage"
+        icon: mdi:timer-sand
+        state: >
+          {% set detected = states('input_datetime.ha_update_release_detected') %}
+          {% if detected not in ['unknown', 'unavailable', '1970-01-01 00:00:00', ''] %}
+            {% set dt = as_datetime(detected) %}
+            {% set update_time = (dt + timedelta(days=7)) | as_timestamp %}
+            {% set diff = ((update_time - now() | as_timestamp) / 86400) | round(1) %}
+            {{ [diff, 0] | max }}
+          {% else %}
+            -1
+          {% endif %}
+
+rest:
+  - resource: "https://api.github.com/repos/home-assistant/core/releases/latest"
+    scan_interval: 3600
+    headers:
+      User-Agent: "HomeAssistant"
+      Accept: "application/vnd.github.v3+json"
+    sensor:
+      - name: "HA GitHub Release Notes"
+        unique_id: ha_github_release_notes
+        value_template: "{{ value_json.tag_name }}"
+        json_attributes:
+          - body
+          - published_at
+          - html_url
+          - name
+
+script:
+  # ------------------------------------------------------------------ 01 Detect
+  ha_auto_update_01_detect_updates:
+    alias: "01 HA Auto-Update | Updates erkennen"
+    description: "Erkennt alle ausstehenden Updates (Core, Addons, HACS) & speichert Status"
+    sequence:
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ha_update_release_detected
+        data:
+          datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ha_update_version_detected
+        data:
+          value: >
+            Core: {{ states('update.home_assistant_core_update') }} | Pending total: {{ states.update | selectattr('state', 'eq', 'on') | list | count }}
+
+  # ------------------------------------------------------------------ 02 AI Summary & Preview
+  ha_auto_update_02_ai_preview_notification:
+    alias: "02 HA Auto-Update | KI-Vorschau & VorankÃ¼ndigung"
+    description: "Erstellt KI-Zusammenfassung der Release Notes & sendet VorankÃ¼ndigung"
+    sequence:
+      - service: conversation.process
+        data:
+          agent_id: conversation.google_generative_ai
+          text: >
+            Bitte erstelle eine kompakte deutsche Zusammenfassung der Home Assistant Release Notes fÃ¼r Version {{ states('sensor.ha_github_release_notes') }}.
+            Highlights, Breaking Changes und nÃ¼tzliche Neuerungen hervorheben.
+            Release Notes:
+            {{ state_attr('sensor.ha_github_release_notes', 'body') | truncate(6000) }}
+        response_variable: ai_resp
+      - event: set_ha_update_ai_summary
+        event_data:
+          summary: "{{ ai_resp.response.speech.plain.speech | default('Zusammenfassung erstellt.') | truncate(6000) }}"
+      - service: persistent_notification.create
+        data:
+          notification_id: ha_update_preview
+          title: "ð HA Auto-Update VorankÃ¼ndigung"
+          message: >
+            Es stehen **{{ states.update | selectattr('state', 'eq', 'on') | list | count }}** Updates bereit.
+
+            ð¤ **KI-Zusammenfassung der Neuerungen:**
+            {{ state_attr('sensor.ha_update_ki_zusammenfassung', 'summary') }}
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ha_update_notification_sent
+
+  # ------------------------------------------------------------------ 03 Backup
+  ha_auto_update_03_create_backup:
+    alias: "03 HA Auto-Update | Backup erstellen"
+    description: "Erstellt ein Vollbackup vor dem Update"
+    sequence:
+      - service: persistent_notification.create
+        data:
+          notification_id: ha_update_status
+          title: "ð Backup vor Update gestartet"
+          message: "VollstÃ¤ndiges Pre-Update Backup wird erstellt..."
+      - service: backup.create
+        data:
+          name: "Pre-Update_{{ now().strftime('%Y%m%d_%H%M') }}"
+
+  # ------------------------------------------------------------------ 04 Perform Parallel/Batch Updates
+  ha_auto_update_04_perform_parallel_updates:
+    alias: "04 HA Auto-Update | Parallele / Batch-Updates ausfÃ¼hren"
+    description: "FÃ¼hrt kontrollierte Updates fÃ¼r alle ausstehenden Komponenten durch"
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.ha_update_in_progress
+      - service: update.install
+        target:
+          entity_id: >
+            {{ states.update
+               | selectattr('state', 'eq', 'on')
+               | map(attribute='entity_id')
+               | list }}
+        data:
+          backup: false
+
+  # ------------------------------------------------------------------ 05 Real Verification
+  ha_auto_update_05_verify_actual_success:
+    alias: "05 HA Auto-Update | Echte Erfolgs-Verifizierung"
+    description: "PrÃ¼ft ob alle Komponenten tatsÃ¤chlich erfolgreich aktualisiert wurden"
+    sequence:
+      - delay: "00:00:30"
+      - service: input_text.set_value
+        target:
+          entity_id: input_text.ha_update_verification_results
+        data:
+          value: >
+            {% set remaining = states.update | selectattr('state', 'eq', 'on') | list | count %}
+            {% if remaining == 0 %}
+              ERFOLG: Alle Komponenten (0 verbleibend) erfolgreich aktualisiert!
+            {% else %}
+              TEILERFOLG/FEHLER: Noch {{ remaining }} Komponenten ausstehend.
+            {% endif %}
+
+  # ------------------------------------------------------------------ 06 Results Notification
+  ha_auto_update_06_send_results_notification:
+    alias: "06 HA Auto-Update | Ergebnis-Benachrichtigung"
+    description: "Sendet Abschlussbericht mit echten Verifizierungsergebnissen"
+    sequence:
+      - service: persistent_notification.create
+        data:
+          notification_id: ha_update_result
+          title: "ð HA Auto-Update Bericht"
+          message: >
+            **Ergebnis:** {{ states('input_text.ha_update_verification_results') }}
+
+            Verbleibende ausstehende Updates: **{{ states.update | selectattr('state', 'eq', 'on') | list | count }}**
+      - service: notify.notify
+        data:
+          title: "HA Update Bericht"
+          message: "{{ states('input_text.ha_update_verification_results') }}"
+
+  # ------------------------------------------------------------------ 07 Reset
+  ha_auto_update_07_safety_reset:
+    alias: "07 HA Auto-Update | Sicherheits-Reset"
+    description: "Setzt Status-Flags zurÃ¼ck"
+    sequence:
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ha_update_in_progress
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.ha_update_notification_sent
+      - service: input_datetime.set_datetime
+        target:
+          entity_id: input_datetime.ha_update_release_detected
+        data:
+          datetime: "1970-01-01 00:00:00"
+
+automation:
+  # ------------------------------------------------------------------ Automation 01: Detect
+  - id: 01_ha_auto_update_detect_new_release
+    alias: "01 HA Auto-Update | Neues Release erkennen & erfassen"
+    description: "Erkennt neue HA & HACS Updates und erfasst Release"
+    trigger:
+      - platform: state
+        entity_id: update.home_assistant_core_update
+        to: "on"
+    condition:
+      - condition: state
+        entity_id: input_boolean.ha_update_in_progress
+        state: "off"
+    action:
+      - service: script.ha_auto_update_01_detect_updates
+
+  # ------------------------------------------------------------------ Automation 02: Preview
+  - id: 02_ha_auto_update_preview_notification
+    alias: "02 HA Auto-Update | VorankÃ¼ndigung & KI-Vorschau senden"
+    description: "Sendet VorankÃ¼ndigung mit KI-Zusammenfassung"
+    trigger:
+      - platform: time
+        at: "20:00:00"
+    condition:
+      - condition: template
+        value_template: >
+          {% set detected = states('input_datetime.ha_update_release_detected') %}
+          {% if detected in ['unknown', 'unavailable', '1970-01-01 00:00:00', ''] %}
+            false
+          {% else %}
+            {% set dt = as_datetime(detected) %}
+            {% set days_passed = ((now() - dt).total_seconds() / 86400) | int %}
+            {{ days_passed == 6 }}
+          {% endif %}
+    action:
+      - service: script.ha_auto_update_02_ai_preview_notification
+
+  # ------------------------------------------------------------------ Automation 03: Perform & Verify
+  - id: 03_ha_auto_update_perform_and_verify
+    alias: "03 HA Auto-Update | AusfÃ¼hrung & Verifizierung"
+    description: "FÃ¼hrt Backup, Updates und echte Verifizierung durch"
+    trigger:
+      - platform: time
+        at: "03:00:00"
+    condition:
+      - condition: state
+        entity_id: input_boolean.ha_update_in_progress
+        state: "off"
+    action:
+      - service: script.ha_auto_update_03_create_backup
+      - delay: "00:02:00"
+      - service: script.ha_auto_update_04_perform_parallel_updates
+      - delay: "00:05:00"
+      - service: script.ha_auto_update_05_verify_actual_success
+      - service: script.ha_auto_update_06_send_results_notification
+      - service: script.ha_auto_update_07_safety_reset
+
+  # ------------------------------------------------------------------ Automation 04: Boot Report
+  - id: 04_ha_auto_update_boot_report
+    alias: "04 HA Auto-Update | Neustart Verifizierung"
+    description: "Verifiziert nach Systemneustart den echten Erfolg"
+    trigger:
+      - platform: homeassistant
+        event: start
+    action:
+      - delay: "00:03:00"
+      - service: script.ha_auto_update_05_verify_actual_success
+      - service: script.ha_auto_update_06_send_results_notification
+
+  # ------------------------------------------------------------------ Automation 05: Safety Reset
+  - id: 05_ha_auto_update_safety_reset
+    alias: "05 HA Auto-Update | Sicherheits-Reset (24h)"
+    description: "Reset bei HÃ¤ngenbleiben >24h"
+    trigger:
+      - platform: time_pattern
+        hours: "/1"
+    condition:
+      - condition: state
+        entity_id: input_boolean.ha_update_in_progress
+        state: "on"
+      - condition: template
+        value_template: >
+          {% set last_changed = states.input_boolean.ha_update_in_progress.last_changed %}
+          {{ (now() - last_changed).total_seconds() > 86400 }}
+    action:
+      - service: script.ha_auto_update_07_safety_reset

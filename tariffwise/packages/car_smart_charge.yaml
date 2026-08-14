@@ -1,0 +1,105 @@
+# Ladeplanung via NFC Tag "plugsurfing"
+input_boolean:
+  car_smart_charge_active:
+    name: "Auto Smart Charge Aktiv (NFC)"
+    icon: mdi:ev-station
+
+input_number:
+  car_target_soc:
+    name: "Auto Ziel SoC"
+    min: 0
+    max: 100
+    step: 5
+    unit_of_measurement: "%"
+    icon: mdi:battery-charging-80
+  
+  car_target_hour:
+    name: "Auto Zielzeit (Uhr)"
+    min: 0
+    max: 23
+    step: 1
+    unit_of_measurement: "h"
+    icon: mdi:clock
+
+automation:
+  - id: nfc_car_smart_charge_trigger
+    alias: "Auto: Ladeplanung Ã¼ber NFC 'plugsurfing' setzen"
+    trigger:
+      - platform: event
+        event_type: tag_scanned
+        event_data:
+          tag_id: plugsurfing
+    action:
+      - action: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.car_smart_charge_active
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.car_target_soc
+        data:
+          value: 90
+      - action: input_number.set_value
+        target:
+          entity_id: input_number.car_target_hour
+        data:
+          value: 6
+      - action: notify.notify
+        data:
+          message: "NFC gescannt: Smart Charge bis 06:00 Uhr auf 90% aktiviert."
+
+  - id: car_smart_charge_execution
+    alias: "Auto: Smart Charge Tibber Logik ausfÃ¼hren"
+    trigger:
+      - platform: time_pattern
+        minutes: "/10"
+    condition:
+      - condition: state
+        entity_id: input_boolean.car_smart_charge_active
+        state: "on"
+    action:
+      - choose:
+          - conditions:
+              - condition: numeric_state
+                entity_id: sensor.fordpass_wf0rpbef3tsc84339_soc
+                above: 89.9
+            sequence:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: input_boolean.car_smart_charge_active
+              - action: switch.turn_off
+                target:
+                  entity_id: switch.fordpass_wf0rpbef3tsc84339_elvehcharge
+              - action: notify.notify
+                data:
+                  message: "Auto hat 90% erreicht. Ladevorgang gestoppt."
+        default:
+          # Wir schalten das Laden an, falls die aktuelle Stunde zu den gÃ¼nstigsten gehÃ¶rt.
+          # Da wir bis 06:00 laden wollen, bauen wir hier eine kompakte Evaluierung ein.
+          - action: "switch.turn_{{ 'on' if is_cheap else 'off' }}"
+            target:
+              entity_id: switch.fordpass_wf0rpbef3tsc84339_elvehcharge
+    variables:
+      is_cheap: >
+        {% set cp = states('sensor.electricity_price_im_beisen_12b') | float(99) %}
+        {% set ns = namespace(prices=[]) %}
+        {% set tibber_today = state_attr('sensor.electricity_price_im_beisen_12b', 'today') %}
+        {% set target_hour = states('input_number.car_target_hour') | int %}
+        {% if tibber_today %}
+          {% for p in tibber_today %}
+            {% set dt = as_datetime(p.starts_at) | as_local %}
+            {% if (now().hour > target_hour and (dt.date() > now().date() or dt.hour >= now().hour)) or (now().hour <= target_hour and dt.date() == now().date() and dt.hour < target_hour) %}
+               {% set ns.prices = ns.prices + [p.total | float] %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+        {% if ns.prices | length > 0 %}
+          {% set needed_hours = 4 %}
+          {% set block = ns.prices | sort %}
+          {% if block | length >= needed_hours %}
+            {{ cp <= block[needed_hours - 1] + 0.0001 }}
+          {% else %}
+            true
+          {% endif %}
+        {% else %}
+          false
+        {% endif %}

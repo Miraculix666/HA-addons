@@ -1,9 +1,11 @@
 {
-  "name": "TariffWise \u26a1 Dynamic Tariff & Energy Suite",
+  "name": "ZHA Smart Maintenance & Watchdog Suite",
   "content_in_root": false,
   "filename": "hacs.json",
   "render_readme": true,
   "zip_release": false,
   "homeassistant": "2024.1.0",
-  "dependencies": []
+  "dependencies": [
+    "zha"
+  ]
 }

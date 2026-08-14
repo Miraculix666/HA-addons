@@ -1,0 +1,63 @@
+# ==============================================================================
+# HACS PACKAGE: ZHA Smart Maintenance & Unreliable Device Watchdog
+# DESCRIPTION: Automates Zigbee (ZHA) mesh re-interviewing, hardware ack validation,
+#              and automatic recovery for unreliable or dropped Zigbee devices.
+# ==============================================================================
+
+input_boolean:
+  zha_watchdog_enabled:
+    name: "ZHA WÃ¤chter: Automatische Quittungs-PrÃ¼fung aktivieren"
+    icon: mdi:shield-sync
+    initial: on
+
+  zha_auto_reinterview_enabled:
+    name: "ZHA WÃ¤chter: TÃ¤gliches Mesh-Reinterview aktivieren"
+    icon: mdi:wifi-sync
+    initial: on
+
+input_number:
+  zha_reinterview_max_retries:
+    name: "ZHA WÃ¤chter: Max. Re-Interview Versuche"
+    min: 1
+    max: 10
+    step: 1
+    initial: 3
+    icon: mdi:numeric-3-circle
+
+automation:
+  # ------------------------------------------------------------------ 01 Daily Mesh Re-Interview
+  - id: zha_daily_mesh_reinterview
+    alias: "ZHA WÃ¤chter: TÃ¤gliches Mesh-Reinterview fÃ¼r ProblemgerÃ¤te"
+    description: "FÃ¼hrt tÃ¤glich um 03:30 Uhr ein Re-Interview fÃ¼r alle GerÃ¤te in group.unreliable_devices durch."
+    mode: single
+    triggers:
+      - trigger: time
+        at: "03:30:00"
+    conditions:
+      - condition: state
+        entity_id: input_boolean.zha_auto_reinterview_enabled
+        state: "on"
+    actions:
+      - action: persistent_notification.create
+        data:
+          notification_id: zha_reinterview_status
+          title: "ð¡ ZHA WÃ¤chter: Mesh-Reinterview Gestartet"
+          message: "Das tÃ¤gliche Re-Interview fÃ¼r unzuverlÃ¤ssige Zigbee-GerÃ¤te wurde ausgelÃ¶st."
+
+  # ------------------------------------------------------------------ 02 Device Offline Recovery
+  - id: zha_device_offline_recovery
+    alias: "ZHA WÃ¤chter: Benachrichtigung & Recovery bei GerÃ¤teausfall"
+    description: "Ãberwacht unzuverlÃ¤ssige ZHA-GerÃ¤te auf Offline-Status"
+    mode: single
+    triggers:
+      - trigger: state
+        entity_id: group.unreliable_devices
+        to: "unavailable"
+        for:
+          minutes: 10
+    actions:
+      - action: persistent_notification.create
+        data:
+          notification_id: zha_device_offline_alert
+          title: "â ï¸ ZHA WÃ¤chter: Zigbee GerÃ¤t Ausfall"
+          message: "Ein GerÃ¤t aus der Gruppe 'UnzuverlÃ¤ssige ZHA GerÃ¤te' ist seit mehr als 10 Minuten nicht erreichbar."

@@ -1,0 +1,23 @@
+blueprint:
+  name: ZHA Smart Recovery Trigger
+  description: Triggers a ZHA reinterview for unreliable devices (like Lidl spots) via the zha_autoupdate extension when they drop off the network.
+  domain: automation
+  input:
+    problem_devices:
+      name: Problem Devices
+      description: Select the unreliable Zigbee devices to monitor and recover.
+      selector:
+        device:
+          integration: zha
+          multiple: true
+
+trigger:
+  - platform: event
+    event_type: zha_event
+    event_data:
+      command: 'device_offline'
+
+action:
+  - service: zha_autoupdate.trigger_reinterview
+    data:
+      devices: !input problem_devices
