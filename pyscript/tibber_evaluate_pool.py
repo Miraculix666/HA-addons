@@ -216,7 +216,10 @@ def tibber_evaluate_pool(
 
                 msg = f"Poolpumpe lief heute real {real_hours} Stunden. Tibber Info für morgen: Durchschnitt {round(avg_price * 100, 2)} Cent. Die günstigste Zeit ist um {min_time}. Geplant: {tom_schedule_str}."
                 try:
-                    if "." in notification_service:
+                    if notification_service.startswith("script.universal_notification") or notification_service.startswith("script."):
+                        service_domain, service_name = notification_service.split(".", 1)
+                        service.call(service_domain, service_name, title="Tibber Poolplan", message=msg)
+                    elif "." in notification_service:
                         service_domain, service_name = notification_service.split(".", 1)
                         service.call(service_domain, service_name, title="Tibber Poolplan", message=msg)
                     else:
