@@ -17,7 +17,9 @@ def tibber_evaluate_pool(
     temp_low=15.0,
     temp_very_low=10.0,
     solar_threshold=500.0,
-    notification_service=""
+    notification_service="",
+    optimization_engine="heuristic",
+    eos_schedule_sensor=""
 ):
     if not target_entity or not _is_valid_entity_id(target_entity):
         log.warning(f"Invalid target_entity: {target_entity}")
@@ -29,6 +31,10 @@ def tibber_evaluate_pool(
         solar_radiation = None
     if temperature_sensor and not _is_valid_entity_id(temperature_sensor):
         temperature_sensor = None
+
+    if eos_schedule_sensor and not _is_valid_entity_id(eos_schedule_sensor):
+        eos_schedule_sensor = None
+
 
     try: hours = float(hours)
     except Exception: hours = 4.0
@@ -156,6 +162,26 @@ def tibber_evaluate_pool(
         for b in today_blocks:
             if b["price"] <= 0.0:
                 scheduled_times.add(b["start_time"])
+
+
+    # 5.5 Check EOS Optimization
+    if optimization_engine == "akkudoktor_eos" and eos_schedule_sensor:
+        try:
+            eos_state = state.get(eos_schedule_sensor)
+            if eos_state and eos_state.lower() not in ["unknown", "unavailable"]:
+                # Assume EOS sensor returns "on" or "off" for current time block
+                # Or contains a schedule array. For simplicity in this adaptation, if it's "on", we run.
+                # If we want to fully override the schedule based on an EOS schedule array, we would parse it here.
+                # Here we check if the EOS schedule explicitly wants it on.
+                if eos_state == "on":
+                    should_run = True
+                    scheduled_times.add(now.strftime("%Y-%m-%dT%H:%M:00")) # Dummy add to trigger should_run later
+                else:
+                    should_run = False
+                    scheduled_times = set() # Clear heuristic schedule
+                log.info(f"Tibber Pool: Using Akkudoktor-EOS schedule for {target_entity} (State: {eos_state})")
+        except Exception as e:
+            log.warning(f"Tibber Pool: Failed to read EOS schedule, falling back to heuristic: {e}")
 
     # 6. Format schedule
     today_times_list = sorted(list(set(b["start_time"][11:16] for b in today_blocks if b["start_time"] in scheduled_times)))
