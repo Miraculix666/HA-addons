@@ -9,6 +9,24 @@ blueprint:
     Bei negativen Preisen wird die Pumpe sofort eingeschaltet (falls konfiguriert).
   domain: automation
   input:
+    optimization_engine:
+      name: Optimierungs-Engine
+      description: Wähle die Methode zur Preisoptimierung (Heuristisch oder Akkudoktor-EOS).
+      default: heuristic
+      selector:
+        select:
+          options:
+            - label: "Heuristik (TariffWise Standard)"
+              value: "heuristic"
+            - label: "Akkudoktor-EOS (Mathematisches Optimum)"
+              value: "akkudoktor_eos"
+    eos_schedule_sensor:
+      name: EOS Planungs-Sensor (Optional)
+      description: Der Sensor, der den von Akkudoktor-EOS generierten Schaltplan enthält (nur relevant wenn EOS gewählt ist).
+      default: ""
+      selector:
+        entity:
+          domain: sensor
     target_entity:
       name: Poolpumpe (Switch)
       description: Der Schalter für die Poolpumpe.
@@ -128,6 +146,8 @@ action:
   # just Jinja2 in YAML is too complex. We align with the existing `tibber_smart_device.yaml`.
   - action: pyscript.tibber_evaluate_pool
     data:
+      optimization_engine: !input optimization_engine
+      eos_schedule_sensor: !input eos_schedule_sensor
       target_entity: !input target_entity
       hours: !input duration_hours
       season_sensor: !input season_sensor
